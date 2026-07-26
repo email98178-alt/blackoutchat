@@ -8,7 +8,6 @@ const path = require('path');
 const axios = require('axios');
 const dotenv = require('dotenv');
 const OpenAI = require('openai');
-const cors = require('cors');
 const crypto = require('crypto');
 
 dotenv.config();
@@ -20,36 +19,17 @@ app.set('trust proxy', 1);
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_FILE = path.join(__dirname, 'messages.json');
 const BLACKPAYMENTS_API_URL = process.env.BLACKPAYMENTS_API_URL || 'https://api.blackpayments.pro/v1';
-const BLACKPAYMENTS_CREDENTIAL = process.env.BLACKPAYMENTS_BASIC_AUTH || process.env.WOOVI_APP_ID || '';
+const BLACKPAYMENTS_CREDENTIAL = process.env.BLACKPAYMENTS_BASIC_AUTH || '';
 const DEFAULT_CUSTOMER_EMAIL = process.env.PIX_CUSTOMER_EMAIL || 'email001989887@gmail.com';
 const DEFAULT_CUSTOMER_PHONE = onlyDigits(process.env.PIX_CUSTOMER_PHONE || '11987289871');
 const PIX_EXPIRES_IN_DAYS = Math.max(1, Number.parseInt(process.env.PIX_EXPIRES_IN_DAYS || '1', 10));
 const PIX_POSTBACK_URL = process.env.PIX_POSTBACK_URL || '';
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
-  .split(',')
-  .map(origin => origin.trim())
-  .filter(Boolean);
 
-function isOriginAllowed(origin) {
-  return !origin || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin);
-}
-
-const corsOptions = {
-  origin(origin, callback) {
-    if (isOriginAllowed(origin)) return callback(null, true);
-    return callback(new Error('Origem não autorizada pelo CORS.'));
-  },
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type'],
-};
-
-app.use(cors(corsOptions));
 app.use(express.json({ limit: '100kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(__dirname));
 
 const server = http.createServer(app);
-const io = new Server(server, { cors: corsOptions });
+const io = new Server(server);
 
 let messages = [];
 if (fs.existsSync(DATA_FILE)) {
@@ -213,7 +193,9 @@ function limitPixRequests(req, res, next) {
   return next();
 }
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, service: 'diskgas-checkout' });
@@ -221,6 +203,14 @@ app.get('/api/health', (req, res) => {
 
 app.post('/api/chat', async (req, res) => {
   const { message, context } = req.body;
+
+  if (!openai) {
+    return res.status(503).json({
+      reply: 'O atendimento por IA está temporariamente indisponível.',
+      code: 'OPENAI_NOT_CONFIGURED',
+    });
+  }
+
   try {
     const messagesForOpenAI = [];
     if (context) messagesForOpenAI.push({ role: 'system', content: context });
