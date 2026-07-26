@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: checkout-woovi-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: WOOVI_APP_ID
+        sync: false
+      - key: PIX_CUSTOMER_EMAIL
+        value: email001989887@gmail.com
+      - key: PIX_CUSTOMER_PHONE
+        value: "11987289871"
+      - key: PIX_EXPIRES_IN_DAYS
+        value: "1"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
