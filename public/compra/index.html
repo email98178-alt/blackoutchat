@@ -1159,7 +1159,7 @@ let chatUnlocked = false;
 let alertTimeout = null;
 
 // ── SOCKET.IO INTEGRATION ────────────────────────────
-const SOCKET_SERVER_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://checkout-woovi-backend.onrender.com';
+const SOCKET_SERVER_URL = window.location.origin;
 const socket = io(SOCKET_SERVER_URL);
 const urlParams = new URLSearchParams(window.__DISKGAS_URL_PARAMS__ || window.location.search);
 const nomeFromUrl = urlParams.get('nome');
