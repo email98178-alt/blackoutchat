@@ -1837,7 +1837,7 @@ await agentSay(`Sou Mateus, vendedor autorizado Diskgas em ${ORDER.location} e R
     const localFinal = localBase === 'sua região' ? localBase : `${localBase} e região`;
     await agentSay(`Certo, já vou enviar o pix, um segundo...`);
     await pause(900); setTyping(true); await pause(5500); setTyping(false);
-await addMsg(`Você verá 𝗠𝗮𝘁𝗲𝘂𝘀 𝗦𝗶𝗹𝘃𝗮 no pix, sou o vendedor diskgás oficial em ${ORDER.location} e região, serei responsável pela entrega 😃`, 'agent', true);
+await addMsg(`Me chamo 𝗠𝗮𝘁𝗲𝘂𝘀 𝗦𝗶𝗹𝘃𝗮, sou o vendedor diskgás oficial em ${ORDER.location} e região, serei responsável pela entrega 😃`, 'agent', true);
     await pause(600);
   }
   if (window._currentFlowStep === 6) {
@@ -2056,7 +2056,7 @@ if (!window._orderConfirmationShown && window._currentFlowStep <= 3) {
           const mensagemMinuscula = originalText.toLowerCase();
 
   // FILTRO: Bloqueio de contatos externos (Telefone, WhatsApp, etc)
-  const termosBloqueados = ["telefone", "whatsapp", "contato", "zap", "ligo", "ligar", "ligação", "ligacao", "falar", "falo", "passa", "whatss", "ligar", "fone", "wpp", "chama", "call"];
+  const termosBloqueados = ["telefone", "whatsapp", "contato", "zap", "ligo", "ligar", "ligação", "ligacao", "whatss", "ligar", "fone", "wpp", "chama", "call"];
   if (termosBloqueados.some(termo => mensagemMinuscula.includes(termo))) {
     setTyping(true);
     await pause(1500);
@@ -2090,7 +2090,7 @@ if (!window._orderConfirmationShown && window._currentFlowStep <= 3) {
     setTyping(true);
     await pause(1500);
     setTyping(false);
-    await agentSay("Se ver algum tipo de aviso na hora de pagar não se preocupe, é normal por ser a sua primeira vez pagando para esse pix. Pode pagar tranquilamente que garantimos sua entrega. 😄", true, true);
+    await agentSay("Se ver algum tipo de aviso na hora de pagar não se preocupe, é normal por ser sua primeira vez pagando para esse pix. Pode pagar tranquilamente que garantimos a entrega no prazo ou fazemos a devolução do seu dinheiro. 😄", true, true);
     saveChatHistory();
     sendBtnEl.disabled = !inputEl.value.trim();
     return;
