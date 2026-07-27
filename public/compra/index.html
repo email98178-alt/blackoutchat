@@ -1942,7 +1942,7 @@ async function getChatGPTResponse(userMessage, chatHistory, currentFlowStep) {
   const msgEntrega1 = "Fique tranquilo, sua compra é protegida e assegurada pela Diskgás, garantimos a entrega no prazo ou fazemos a devolução do seu dinheiro. 😄";
   const msgPix1 = "O pagamento via Pix é 100% seguro e protegido. A entrega é garantida e a aprovação imediata, e em caso de qualquer problema fazemos o reembolso completo do valor pago. 😄";
   const msgQualidade1 = "Trabalhamos apenas com produtos certificados. Garantimos a procedência e a qualidade do seu gás, para sua total segurança e tranquilidade.";
-  const msgConfianca1 = "A sua compra é assegurada pela Diskgas, garantimos a sua entrega no prazo, caso contrário faremos o reembolso completo do valor pago. 😄";
+  const msgConfianca1 = "A sua compra é assegurada pela Diskgas, garantimos a entrega no prazo ou fazemos o reembolso completo do valor pago. 😄";
 
   // Mensagens de conversão - Nível 2 (novas, mais detalhadas)
   const msgEntrega2 = "Entendo sua preocupação. Além da nossa garantia de reembolso, saiba que contamos com uma logística otimizada e entregadores treinados para assegurar que seu pedido chegue rápido e em perfeitas condições. Sua tranquilidade é nossa prioridade! 😄";
@@ -2095,7 +2095,7 @@ await pause(1200);
 setTyping(true);
 await pause(1500);
 setTyping(false);
-await agentSay("Pode pagar tranquilamente que garantimos a entrega no prazo ou fazemos a devolução do seu dinheiro. 😄", true, true);
+await agentSay("Pode pagar tranquilamente que garantimos a entrega do seu gás ou fazemos a devolução do seu dinheiro. 😄", true, true);
     saveChatHistory();
     sendBtnEl.disabled = !inputEl.value.trim();
     return;
