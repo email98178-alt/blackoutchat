@@ -19,7 +19,8 @@ app.set('trust proxy', 1);
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_FILE = path.join(__dirname, 'messages.json');
 const BLACKPAYMENTS_API_URL = process.env.BLACKPAYMENTS_API_URL || 'https://api.blackpayments.pro/v1';
-const BLACKPAYMENTS_CREDENTIAL = process.env.BLACKPAYMENTS_BASIC_AUTH || '';
+const BLACKPAYMENTS_PUBLIC_KEY = String(process.env.BLACKPAYMENTS_PUBLIC_KEY || '').trim();
+const BLACKPAYMENTS_SECRET_KEY = String(process.env.BLACKPAYMENTS_SECRET_KEY || '').trim();
 const DEFAULT_CUSTOMER_EMAIL = process.env.PIX_CUSTOMER_EMAIL || 'email001989887@gmail.com';
 const DEFAULT_CUSTOMER_PHONE = onlyDigits(process.env.PIX_CUSTOMER_PHONE || '11987289871');
 const PIX_EXPIRES_IN_DAYS = Math.max(1, Number.parseInt(process.env.PIX_EXPIRES_IN_DAYS || '1', 10));
@@ -71,13 +72,9 @@ function isValidCpf(value) {
 }
 
 function getBasicAuthorizationHeader() {
-  const credential = BLACKPAYMENTS_CREDENTIAL.trim();
-  if (!credential) return '';
-  if (/^Basic\s+/i.test(credential)) return credential;
-  if (credential.includes(':')) {
-    return `Basic ${Buffer.from(credential, 'utf8').toString('base64')}`;
-  }
-  return `Basic ${credential}`;
+  if (!BLACKPAYMENTS_PUBLIC_KEY || !BLACKPAYMENTS_SECRET_KEY) return '';
+  const credentials = `${BLACKPAYMENTS_PUBLIC_KEY}:${BLACKPAYMENTS_SECRET_KEY}`;
+  return `Basic ${Buffer.from(credentials, 'utf8').toString('base64')}`;
 }
 
 function normalizeAmount(value) {
@@ -250,7 +247,7 @@ app.post('/api/pix', limitPixRequests, async (req, res) => {
 
     const authorization = getBasicAuthorizationHeader();
     if (!authorization) {
-      console.error(`[${requestId}] Credencial da BlackPayments ausente.`);
+      console.error(`[${requestId}] Public Key ou Secret Key da BlackPayments ausente.`);
       return res.status(503).json({ success: false, code: 'PAYMENT_NOT_CONFIGURED', message: 'Pagamento temporariamente indisponível.' });
     }
 
