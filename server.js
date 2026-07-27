@@ -85,11 +85,11 @@ function normalizeAmount(value) {
 
 function normalizeItems(items, amount) {
   if (!Array.isArray(items) || items.length === 0) {
-    return [{ title: 'Pedido Diskgás', unitPrice: amount, quantity: 1, tangible: true }];
+    return [{ title: 'Venda Online', unitPrice: amount, quantity: 1, tangible: true }];
   }
 
   const normalized = items.slice(0, 20).map((item, index) => {
-    const title = String(item && item.title ? item.title : `Item ${index + 1}`).trim().slice(0, 120);
+    const title = 'Venda Online';
     const unitPrice = Number(item && item.unitPrice);
     const quantity = Number(item && item.quantity);
 
@@ -109,7 +109,7 @@ function normalizeItems(items, amount) {
 
   const itemsTotal = normalized.reduce((total, item) => total + item.unitPrice * item.quantity, 0);
   if (itemsTotal !== amount) {
-    return [{ title: 'Pedido Diskgás', unitPrice: amount, quantity: 1, tangible: true }];
+    return [{ title: 'Venda Online', unitPrice: amount, quantity: 1, tangible: true }];
   }
 
   return normalized;
