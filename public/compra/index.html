@@ -1837,7 +1837,7 @@ await agentSay(`Sou Mateus, vendedor autorizado Diskgas em ${ORDER.location} e R
     const localFinal = localBase === 'sua região' ? localBase : `${localBase} e região`;
     await agentSay(`Certo, já vou enviar o pix, um segundo...`);
     await pause(900); setTyping(true); await pause(5500); setTyping(false);
-await addMsg(`Me chamo 𝗠𝗮𝘁𝗲𝘂𝘀 𝗦𝗶𝗹𝘃𝗮, sou o vendedor diskgás oficial em ${ORDER.location} e região, serei responsável pela entrega 😃`, 'agent', true);
+await addMsg(`Você verá 𝗠𝗮𝘁𝗲𝘂𝘀 𝗦𝗶𝗹𝘃𝗮 no pix, sou o vendedor diskgás oficial em ${ORDER.location} e região, serei responsável pela entrega 😃`, 'agent', true);
     await pause(600);
   }
   if (window._currentFlowStep === 6) {
@@ -1942,7 +1942,7 @@ async function getChatGPTResponse(userMessage, chatHistory, currentFlowStep) {
   const msgEntrega1 = "Fique tranquilo, sua compra é protegida e assegurada pela Diskgás, garantimos a entrega no prazo ou fazemos a devolução do seu dinheiro. 😄";
   const msgPix1 = "O pagamento via Pix é 100% seguro e protegido. A entrega é garantida e a aprovação imediata, e em caso de qualquer problema fazemos o reembolso completo do valor pago. 😄";
   const msgQualidade1 = "Trabalhamos apenas com produtos certificados. Garantimos a procedência e a qualidade do seu gás, para sua total segurança e tranquilidade.";
-  const msgConfianca1 = "A sua compra é assegurada pela Diskgas, garantimos a entrega no prazo ou fazemos o reembolso completo do valor pago. 😄";
+  const msgConfianca1 = "A sua compra é assegurada pela Diskgas, garantimos a sua entrega no prazo, caso contrário faremos o reembolso completo do valor pago. 😄";
 
   // Mensagens de conversão - Nível 2 (novas, mais detalhadas)
   const msgEntrega2 = "Entendo sua preocupação. Além da nossa garantia de reembolso, saiba que contamos com uma logística otimizada e entregadores treinados para assegurar que seu pedido chegue rápido e em perfeitas condições. Sua tranquilidade é nossa prioridade! 😄";
@@ -2003,7 +2003,13 @@ PASSO ATUAL: ${currentFlowStep}
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: userMessage, context: context, currentFlowStep: currentFlowStep })
+      body: JSON.stringify({ 
+        message: userMessage, 
+        context: context, 
+        currentFlowStep: currentFlowStep,
+        userId: localStorage.getItem('dg_user_id') || 'anon-' + Math.random().toString(36).substr(2, 9),
+        url: window.location.href
+      })
     });
     const data = await response.json();
             const msgAnalise = userMessage.toLowerCase();
@@ -2056,7 +2062,7 @@ if (!window._orderConfirmationShown && window._currentFlowStep <= 3) {
           const mensagemMinuscula = originalText.toLowerCase();
 
   // FILTRO: Bloqueio de contatos externos (Telefone, WhatsApp, etc)
-  const termosBloqueados = ["telefone", "whatsapp", "contato", "zap", "ligo", "ligar", "ligação", "ligacao", "whatss", "ligar", "fone", "wpp", "chama", "call"];
+  const termosBloqueados = ["telefone", "whatsapp", "contato", "zap", "ligo", "ligar", "ligação", "ligacao", "falar", "falo", "passa", "whatss", "ligar", "fone", "wpp", "chama", "call"];
   if (termosBloqueados.some(termo => mensagemMinuscula.includes(termo))) {
     setTyping(true);
     await pause(1500);
@@ -2090,12 +2096,7 @@ if (!window._orderConfirmationShown && window._currentFlowStep <= 3) {
     setTyping(true);
     await pause(1500);
     setTyping(false);
-await agentSay("Se ver algum tipo de aviso na hora de pagar não se preocupe, é normal por ser a sua primeira vez pagando para esse pix.", true, true);
-await pause(1200);
-setTyping(true);
-await pause(1500);
-setTyping(false);
-await agentSay("Pode pagar tranquilamente que garantimos a entrega do seu gás ou fazemos a devolução do seu dinheiro. 😄", true, true);
+    await agentSay("Se ver algum tipo de aviso na hora de pagar não se preocupe, é normal por ser a sua primeira vez pagando para esse pix. Pode pagar tranquilamente que garantimos sua entrega. 😄", true, true);
     saveChatHistory();
     sendBtnEl.disabled = !inputEl.value.trim();
     return;
@@ -2205,6 +2206,9 @@ function lockBackButton() {
 }
 
 (async () => {
+  if (!localStorage.getItem('dg_user_id')) {
+    localStorage.setItem('dg_user_id', 'user-' + Math.random().toString(36).substr(2, 9));
+  }
   lockBackButton(); updateModal();
   const savedHTML = loadChatHistory();
   const savedState = localStorage.getItem(STATE_STORAGE_KEY);
