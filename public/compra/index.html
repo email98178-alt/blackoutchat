@@ -1172,13 +1172,9 @@ socket.on('connect', () => {
 });
 
 socket.on('receive_message', (data) => {
-    // CORREÇÃO DE DUPLICAÇÃO:
-    // Se a mensagem recebida for do "Mateus" mas tiver o campo `isAuto: true`, 
-    // significa que é uma mensagem que o próprio chat enviou e o servidor está devolvendo.
-    // Ignoramos essas para evitar duplicação.
-    if (data.sender !== 'Cliente' && !data.isAuto) {
-        addMsg(data.text, 'agent', false, true, false); 
-    }
+    // Não usamos este evento pois mensagens do agente são renderizadas localmente
+    // e mensagens do usuário são enviadas apenas via HTTP POST
+    console.log('Mensagem recebida via Socket:', data);
 });
 
   // --- ADICIONE AQUI ---
@@ -1520,13 +1516,13 @@ function addMsg(text, type, newGroup=false, saveToStorage=true, emitToSocket=tru
   
   if (saveToStorage) saveChatHistory();
 
-  // ENVIA PARA O SOCKET
-  if (emitToSocket) {
+  // ENVIA PARA O SOCKET - APENAS MENSAGENS DO USUÁRIO
+  // Não enviamos mensagens do agente via Socket.IO para evitar duplicação
+  if (emitToSocket && type === 'user') {
       socket.emit('send_message', { 
           userId: userId, 
           text: text, 
-          sender: type === 'user' ? 'Cliente' : 'Mateus',
-          isAuto: type === 'agent' // Marca como automática para o servidor saber e para nós ignorarmos na volta
+          sender: 'Cliente'
       });
   }
   
