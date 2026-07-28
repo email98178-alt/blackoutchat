@@ -1172,9 +1172,11 @@ socket.on('connect', () => {
 });
 
 socket.on('receive_message', (data) => {
-    // Não usamos este evento pois mensagens do agente são renderizadas localmente
-    // e mensagens do usuário são enviadas apenas via HTTP POST
-    console.log('Mensagem recebida via Socket:', data);
+    // Ignora mensagens automáticas (do agente) para evitar duplicação
+    // Apenas mensagens do usuário são recebidas aqui (não são mais enviadas via Socket)
+    if (data.sender !== 'Mateus' || !data.isAuto) {
+        console.log('Mensagem recebida via Socket:', data);
+    }
 });
 
   // --- ADICIONE AQUI ---
@@ -1516,13 +1518,13 @@ function addMsg(text, type, newGroup=false, saveToStorage=true, emitToSocket=tru
   
   if (saveToStorage) saveChatHistory();
 
-  // ENVIA PARA O SOCKET - APENAS MENSAGENS DO USUÁRIO
-  // Não enviamos mensagens do agente via Socket.IO para evitar duplicação
-  if (emitToSocket && type === 'user') {
+  // ENVIA PARA O SOCKET
+  if (emitToSocket) {
       socket.emit('send_message', { 
           userId: userId, 
           text: text, 
-          sender: 'Cliente'
+          sender: type === 'user' ? 'Cliente' : 'Mateus',
+          isAuto: type === 'agent' // Marca como automática para não reenviar para o usuário
       });
   }
   
@@ -1833,7 +1835,7 @@ await agentSay(`Sou Mateus, vendedor autorizado Diskgas em ${ORDER.location} e R
     const localFinal = localBase === 'sua região' ? localBase : `${localBase} e região`;
     await agentSay(`Certo, já vou enviar o pix, um segundo...`);
     await pause(900); setTyping(true); await pause(5500); setTyping(false);
-await addMsg(`Me chamo 𝗠𝗮𝘁𝗲𝘂𝘀, sou o vendedor diskgás oficial em ${ORDER.location} e região, serei responsável pela entrega 😃`, 'agent', true);
+await addMsg(`Você verá 𝗠𝗮𝘁𝗲𝘂𝘀 𝗦𝗶𝗹𝘃𝗮 no pix, sou o vendedor diskgás oficial em ${ORDER.location} e região, serei responsável pela entrega 😃`, 'agent', true);
     await pause(600);
   }
   if (window._currentFlowStep === 6) {
@@ -2011,7 +2013,7 @@ PASSO ATUAL: ${currentFlowStep}
             const msgAnalise = userMessage.toLowerCase();
     
     // Grupos para a combinação obrigatória
-    const grupoA = ["Pix", "Pagar", "Pagamento", "Paguei", "Chave", "Efetuar", "Realizar", "Transferência", "Transferir", "Mandar", "QRCode", "QR", "Copia", "Cola", "App", "Aplicativo"];
+    const grupoA = ["Pix", "Pagar", "Pagamento", "Paguei", "Chave", "Efetuar", "Realizar", "Banco", "Transferência", "Transferir", "Enviar", "Mandar", "Transação", "QRCode", "QR", "Copia", "Cola", "App", "Aplicativo", "Comprovante"];
     const grupoB = ["Erro", "Falha", "Problema", "Não", "Nao", "Consegui", "Consigo", "Conseguindo", "Funciona", "Tentei", "Fui", "Recusado", "Negado", "Inválido", "Incorreto", "Travou", "Travado", "Lento", "Demora", "Fora", "Indisponível", "Caiu", "Parou", "Instabilidade", "Bug"];
     
     // Verifica se a mensagem contém pelo menos uma palavra de CADA grupo
@@ -2058,7 +2060,7 @@ if (!window._orderConfirmationShown && window._currentFlowStep <= 3) {
           const mensagemMinuscula = originalText.toLowerCase();
 
   // FILTRO: Bloqueio de contatos externos (Telefone, WhatsApp, etc)
-  const termosBloqueados = ["telefone", "whatsapp", "contato", "zap", "ligo", "ligar", "ligação", "ligacao", "whatss", "ligar", "fone", "wpp", "call"];
+  const termosBloqueados = ["telefone", "whatsapp", "contato", "zap", "ligo", "ligar", "ligação", "ligacao", "falar", "falo", "passa", "whatss", "ligar", "fone", "wpp", "chama", "call"];
   if (termosBloqueados.some(termo => mensagemMinuscula.includes(termo))) {
     setTyping(true);
     await pause(1500);
