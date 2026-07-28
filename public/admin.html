@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diskgas Admin - Dashboard Completo</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0F5BA8;
+            --primary-dark: #0a3d7a;
+            --bg-primary: #f5f7fa;
+            --bg-secondary: #ffffff;
+            --text-primary: #1a202c;
+            --text-secondary: #64748b;
+            --text-tertiary: #94a3b8;
+            --border-color: #e2e8f0;
+            --success: #10b981;
+            --pix-color: #fbbf24;
+            --pix-bg: #fef3c7;
+            --message-user: #e0f2fe;
+            --message-agent: #f8fafc;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: var(--bg-primary); 
+            color: var(--text-primary); 
+            overflow: hidden;
+        }
+
+        .layout { display: flex; height: 100vh; width: 100%; }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            width: 320px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .sidebar-header {
+            padding: 24px 20px;
+            background: var(--primary);
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header h2 { font-size: 1.2rem; margin-bottom: 4px; }
+        .sidebar-header p { font-size: 0.8rem; opacity: 0.8; }
+
+        .search-box { padding: 16px; border-bottom: 1px solid var(--border-color); }
+        .search-box input {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            outline: none;
+            background: var(--bg-primary);
+        }
+
+        /* ===== FILTER TABS ===== */
+        .filter-tabs {
+            display: flex;
+            padding: 12px;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            background: white;
+        }
+
+        .filter-tab {
+            flex: 1;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: white;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .filter-tab.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .chat-list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .chat-list-item {
+            padding: 12px;
+            cursor: pointer;
+            border-radius: 8px;
+            background: white;
+            margin-bottom: 6px;
+            border: 1px solid transparent;
+            position: relative;
+        }
+
+        .chat-list-item:hover { background: var(--bg-primary); }
+        .chat-list-item.unread { background: var(--pix-bg); border-color: var(--pix-color); }
+
+        .chat-list-item .user-id { font-weight: 600; font-size: 0.9rem; color: var(--primary); display: block; margin-bottom: 4px; }
+        .chat-list-item .last-msg { font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-list-item .time { font-size: 0.7rem; color: var(--text-tertiary); position: absolute; top: 12px; right: 12px; }
+
+        .unread-indicator {
+            width: 8px; height: 8px; background: var(--pix-color); border-radius: 50%;
+            position: absolute; bottom: 12px; right: 12px;
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content { 
+            flex: 1; display: flex; flex-direction: column; background: var(--bg-primary);
+            align-items: center; justify-content: center;
+        }
+
+        .empty-state { text-align: center; color: var(--text-secondary); }
+        .empty-state svg { width: 64px; height: 64px; margin-bottom: 16px; opacity: 0.2; }
+
+        /* ===== MODAL ===== */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4);
+            z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(2px);
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal-content {
+            background: white; border-radius: 12px; width: 85%; max-width: 720px; height: 85vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+        }
+
+        .modal-header {
+            padding: 16px 24px; border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+
+        .modal-header h3 { font-size: 1rem; color: var(--primary); }
+
+        .header-actions { display: flex; gap: 10px; }
+
+        .btn-action {
+            padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;
+            cursor: pointer; border: 1px solid var(--border-color); transition: all 0.2s;
+            display: flex; align-items: center; gap: 6px;
+        }
+
+        .btn-copy-json { background: #f0f9ff; color: #0369a1; border-color: #bae6fd; }
+        .btn-copy-json:hover { background: #e0f2fe; }
+
+        .btn-close { background: #fef2f2; color: #ef4444; border-color: #fee2e2; }
+        .btn-close:hover { background: #fee2e2; }
+
+        .modal-messages {
+            flex: 1; padding: 20px; overflow-y: auto; background: var(--bg-primary);
+            display: flex; flex-direction: column; gap: 12px;
+        }
+
+        /* URL INFO BLOCK */
+        .url-info-block {
+            background: #fff; border: 1px solid var(--border-color); border-radius: 10px;
+            padding: 12px 16px; margin-bottom: 15px; font-size: 0.8rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .url-info-block strong { color: var(--primary); display: block; margin-bottom: 4px; font-size: 0.7rem; text-transform: uppercase; }
+        .url-info-link { color: var(--primary-dark); text-decoration: none; word-break: break-all; }
+
+        /* MESSAGES */
+        .message { 
+            max-width: 80%; padding: 10px 14px; border-radius: 10px; font-size: 0.9rem; line-height: 1.4;
+        }
+        .message.user { align-self: flex-start; background: var(--message-user); color: #0369a1; border: 1px solid #bae6fd; }
+        .message.agent { align-self: flex-end; background: white; border: 1px solid var(--border-color); }
+        .message .meta { font-size: 0.7rem; opacity: 0.6; display: block; margin-top: 4px; text-align: right; }
+
+        .pix-highlight-block {
+            max-width: 80%; padding: 12px; border-radius: 10px; background: var(--pix-bg);
+            border: 2px solid var(--pix-color); align-self: flex-start;
+        }
+        .pix-label { background: var(--pix-color); color: #78350f; font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-bottom: 6px; display: inline-block; }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; height: 100vh; border-right: none; }
+            .layout { flex-direction: column; }
+            .main-content { display: none; }
+            .modal-content { width: 95%; height: 90vh; }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Diskgas Admin</h2>
+                <p id="connection-status">Conectando...</p>
+            </div>
+            <div class="search-box"><input type="text" id="user-search" placeholder="Buscar usuário..."></div>
+            <div class="filter-tabs">
+                <button class="filter-tab active" onclick="setActiveFilter('all')">📋 Todas</button>
+                <button class="filter-tab" onclick="setActiveFilter('pix')">💳 Pix</button>
+                <button class="filter-tab" onclick="setActiveFilter('normal')">💬 Outras</button>
+            </div>
+            <div class="chat-list-container" id="chat-list-container"></div>
+        </aside>
+        <main class="main-content">
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                <p>Selecione uma conversa</p>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-user-id">Usuário</h3>
+                <div class="header-actions">
+                    <button class="btn-action btn-copy-json" id="btn-copy-json" onclick="copyUserJson()">
+                        <span>📋 Copiar JSON</span>
+                    </button>
+                    <button class="btn-action btn-close" onclick="closeModal()">Fechar</button>
+                </div>
+            </div>
+            <div class="modal-messages" id="modal-messages"></div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io(window.location.origin);
+        let allChats = {}, chatReadStatus = {}, activeFilter = 'all', currentOpenedUserId = null;
+
+        socket.on('connect', () => {
+            document.getElementById('connection-status').textContent = 'Conectado';
+            socket.emit('join', { userId: 'admin_' + Math.random(), isAdmin: true });
+        });
+
+        socket.on('chat_history', (history) => {
+            allChats = {};
+            history.forEach(msg => {
+                if (!allChats[msg.userId]) { allChats[msg.userId] = []; chatReadStatus[msg.userId] = false; }
+                allChats[msg.userId].push(msg);
+            });
+            renderChatList();
+        });
+
+        socket.on('new_message_for_admin', (message) => {
+            if (!allChats[message.userId]) { allChats[message.userId] = []; chatReadStatus[message.userId] = false; }
+            allChats[message.userId].push(message);
+            chatReadStatus[message.userId] = false;
+            renderChatList();
+        });
+
+        function setActiveFilter(filter) {
+            activeFilter = filter;
+            document.querySelectorAll('.filter-tab').forEach(btn => btn.classList.toggle('active', btn.innerText.toLowerCase().includes(filter)));
+            renderChatList();
+        }
+
+        function renderChatList() {
+            const container = document.getElementById('chat-list-container');
+            const search = document.getElementById('user-search').value.toLowerCase();
+            container.innerHTML = '';
+
+            const users = Object.keys(allChats).filter(id => id.toLowerCase().includes(search)).sort((a, b) => {
+                return new Date(allChats[b][allChats[b].length-1].timestamp) - new Date(allChats[a][allChats[a].length-1].timestamp);
+            });
+
+            users.forEach(userId => {
+                const isPix = allChats[userId].some(m => m.text && m.text.toLowerCase().includes('verá'));
+                if (activeFilter === 'pix' && !isPix) return;
+                if (activeFilter === 'normal' && isPix) return;
+
+                const lastMsg = allChats[userId][allChats[userId].length - 1];
+                const time = new Date(lastMsg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                
+                const item = document.createElement('div');
+                item.className = `chat-list-item ${!chatReadStatus[userId] ? 'unread' : ''}`;
+                item.onclick = () => openModal(userId);
+                item.innerHTML = `<span class="user-id">${userId}</span><p class="last-msg">${lastMsg.text}</p><span class="time">${time}</span>${!chatReadStatus[userId] ? '<div class="unread-indicator"></div>' : ''}`;
+                container.appendChild(item);
+            });
+        }
+
+        function openModal(userId) {
+            currentOpenedUserId = userId;
+            const modal = document.getElementById('modal-overlay');
+            const area = document.getElementById('modal-messages');
+            document.getElementById('modal-user-id').textContent = `Usuário: ${userId}`;
+            area.innerHTML = '';
+            
+            const firstWithUrl = allChats[userId].find(m => m.url);
+            if (firstWithUrl) {
+                const block = document.createElement('div');
+                block.className = 'url-info-block';
+                block.innerHTML = `<strong>🔗 URL de Origem:</strong><a href="${firstWithUrl.url}" target="_blank" class="url-info-link">${firstWithUrl.url}</a>`;
+                area.appendChild(block);
+            }
+
+            allChats[userId].forEach(msg => {
+                const isPix = msg.text && msg.text.toLowerCase().includes('verá');
+                const time = new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const div = document.createElement('div');
+                if (isPix) {
+                    div.className = 'pix-highlight-block';
+                    div.innerHTML = `<span class="pix-label">💳 Pix Gerado</span><div class="content"><strong>${msg.sender}:</strong> ${msg.text}</div><span class="meta">${time}</span>`;
+                } else {
+                    div.className = `message ${msg.sender === 'Mateus' ? 'agent' : 'user'}`;
+                    div.innerHTML = `<strong>${msg.sender}:</strong> ${msg.text}<span class="meta">${time}</span>`;
+                }
+                area.appendChild(div);
+            });
+            
+            chatReadStatus[userId] = true;
+            renderChatList();
+            modal.classList.add('active');
+            area.scrollTop = area.scrollHeight;
+        }
+
+        function closeModal() { document.getElementById('modal-overlay').classList.remove('active'); currentOpenedUserId = null; }
+
+        function copyUserJson() {
+            if (!currentOpenedUserId) return;
+            const msgWithUrl = allChats[currentOpenedUserId].find(m => m.url);
+            if (!msgWithUrl || !msgWithUrl.url) { alert('URL não encontrada para este usuário.'); return; }
+
+            const dataToCopy = {
+                userId: currentOpenedUserId,
+                originUrl: msgWithUrl.url,
+                chatHistory: allChats[currentOpenedUserId].map(msg => ({
+                    sender: msg.sender,
+                    text: msg.text,
+                    timestamp: msg.timestamp,
+                    url: msg.url || undefined // Inclui URL apenas se existir
+                }))
+            };
+
+            navigator.clipboard.writeText(JSON.stringify(dataToCopy, null, 2))
+                .then(() => alert('JSON do usuário copiado para a área de transferência!'))
+                .catch(err => console.error('Erro ao copiar JSON:', err));
+        }
+
+        document.getElementById('user-search').addEventListener('keyup', renderChatList);
+
+        // Ajustar o URL do socket para o mesmo domínio do Render
+        socket.io.uri = window.location.origin;
+
+    </script>
+</body>
+</html>
