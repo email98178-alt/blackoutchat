@@ -17,7 +17,7 @@ app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
 const PORT = Number(process.env.PORT) || 3000;
-const DATA_FILE = path.join(__dirname, 'messages.json');
+
 const BLACKPAYMENTS_API_URL = process.env.BLACKPAYMENTS_API_URL || 'https://api.blackpayments.pro/v1';
 const BLACKPAYMENTS_PUBLIC_KEY = String(process.env.BLACKPAYMENTS_PUBLIC_KEY || '').trim();
 const BLACKPAYMENTS_SECRET_KEY = String(process.env.BLACKPAYMENTS_SECRET_KEY || '').trim();
@@ -32,24 +32,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const server = http.createServer(app);
 const io = new Server(server);
 
-let messages = [];
-if (fs.existsSync(DATA_FILE)) {
-  try {
-    messages = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-    console.log(`Carregadas ${messages.length} mensagens do arquivo.`);
-  } catch (error) {
-    console.error('Erro ao carregar mensagens:', error.message);
-    messages = [];
-  }
-}
 
-function saveMessages() {
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(messages, null, 2));
-  } catch (error) {
-    console.error('Erro ao salvar mensagens:', error.message);
-  }
-}
 
 function onlyDigits(value) {
   return String(value || '').replace(/\D/g, '');
@@ -199,7 +182,13 @@ app.get('/api/health', (req, res) => {
 });
 
 app.post('/api/chat', async (req, res) => {
-  const { message, context } = req.body;
+  const { message, context, userId, url } = req.body;
+  console.log(`Mensagem recebida de ${userId}: ${message} (URL: ${url})`);
+
+  const userMessage = { userId, sender: 'Usuário', text: message, timestamp: new Date().toISOString(), url };
+  if (!chatHistory[userId]) chatHistory[userId] = [];
+  chatHistory[userId].push(userMessage);
+  io.to('admins').emit('new_message_for_admin', userMessage);
 
   if (!openai) {
     return res.status(503).json({
@@ -220,7 +209,12 @@ app.post('/api/chat', async (req, res) => {
       temperature: 0.7,
     });
 
-    return res.json({ reply: completion.choices[0].message.content });
+    const agentReply = completion.choices[0].message.content;
+    const agentMessage = { userId, sender: 'Mateus', text: agentReply, timestamp: new Date().toISOString() };
+    if (!chatHistory[userId]) chatHistory[userId] = [];
+    chatHistory[userId].push(agentMessage);
+    io.to('admins').emit('new_message_for_admin', agentMessage);
+    return res.json({ reply: agentReply });
   } catch (error) {
     console.error('Erro ao chamar a API do OpenAI:', error.response ? error.response.data : error.message);
     return res.status(500).json({ error: 'Erro ao processar sua solicitação com a IA.' });
@@ -338,29 +332,32 @@ app.post('/api/pix', limitPixRequests, async (req, res) => {
 });
 
 const users = {};
+const chatHistory = {}; // Armazenamento em memória para o histórico de chat
+
 io.on('connection', socket => {
   console.log(`Usuário conectado: ${socket.id}`);
 
   socket.on('join', ({ userId, isAdmin }) => {
-    users[userId] = socket.id;
-    socket.join(userId);
-    console.log(`${isAdmin ? 'Admin' : 'Usuário'} ${userId} entrou.`);
-
+    socket.userId = userId;
     if (isAdmin) {
       socket.join('admins');
-      socket.emit('chat_history', messages);
+      socket.emit('chat_history', Object.values(chatHistory).flat());
+    } else {
+      socket.join(userId);
     }
+    users[userId] = socket.id;
+    console.log(`${isAdmin ? 'Admin' : 'Usuário'} ${userId} entrou.`);
   });
 
   socket.on('send_message', data => {
     const { userId, text, sender } = data;
     const message = { userId, text, sender, timestamp: new Date().toISOString() };
-    messages.push(message);
-    saveMessages();
+    if (!chatHistory[userId]) chatHistory[userId] = [];
+    chatHistory[userId].push(message);
 
     console.log(`Mensagem de ${sender} (${userId}): ${text}`);
-    socket.to(userId).emit('receive_message', message);
-    socket.to('admins').emit('new_message_for_admin', message);
+    io.to(userId).emit('receive_message', message);
+    io.to('admins').emit('new_message_for_admin', message);
   });
 
   socket.on('disconnect', () => {
@@ -374,9 +371,17 @@ io.on('connection', socket => {
   });
 });
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+
+
+
+
+app.get("/",(req,res)=>{res.sendFile(path.join(__dirname,"index.html"));});
+
+app.get("/admin",(req,res)=>{res.sendFile(path.join(__dirname,"admin.html"));});
+
+
+// Catch-all para servir index.html para qualquer outra rota não definida
+app.get("/*",(req,res)=>{res.sendFile(path.join(__dirname,"index.html"));});
 
 server.listen(PORT, () => {
   console.log(`Servidor unificado rodando na porta ${PORT}`);
