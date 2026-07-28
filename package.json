@@ -1,78 +1,31 @@
-'use strict';
-
-const fs = require('fs');
-const path = require('path');
-const vm = require('vm');
-
-const root = __dirname;
-const read = name => fs.readFileSync(path.join(root, name), 'utf8');
-const assert = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
-
-const server = read('server.js');
-const html = read('index.html');
-const packageJson = JSON.parse(read('package.json'));
-const renderYaml = read('render.yaml');
-const envFile = read('.env');
-const envExample = read('.env.example');
-const gitignore = read('.gitignore');
-
-new vm.Script(server, { filename: 'server.js' });
-
-const inlineScripts = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)]
-  .map(match => match[1])
-  .filter(script => script.trim());
-assert(inlineScripts.length > 0, 'Nenhum script inline encontrado no HTML.');
-inlineScripts.forEach((script, index) => {
-  new vm.Script(script, { filename: `index-inline-${index + 1}.js` });
-});
-
-assert(!html.includes('STATIC_PIX_CODES'), 'O HTML ainda contém códigos PIX estáticos.');
-assert(!html.includes('d68e0c60-74fe-4df0-8760-7793c80a1d00'), 'O HTML ainda contém a chave PIX antiga.');
-assert(!/0002012678\d{20,}/.test(html), 'O HTML ainda contém um payload PIX fixo.');
-assert(html.includes("const SOCKET_SERVER_URL = window.location.hostname === 'localhost' ? window.location.origin : 'https://chat-diskgas.onrender.com';"), 'O HTML não usa o servidor de chat original.');
-assert(html.includes('`${PIX_API_BASE_URL}/api/pix`'), 'O HTML não chama a rota PIX do próprio servidor.');
-assert(html.includes('payer_cpf: ORDER.cpf'), 'O HTML não envia o CPF real do pedido.');
-assert(html.includes('pixCode = await requestPixCode()'), 'O fluxo não usa o PIX retornado pela API.');
-assert(html.includes('const pixDefault = window._currentPixCode'), 'O reenvio não reutiliza o PIX real gerado.');
-assert(!html.includes('email001989887@gmail.com'), 'O contato padronizado vazou para o HTML.');
-assert(!html.includes('11987289871'), 'O telefone padronizado vazou para o HTML.');
-
-assert(server.includes("process.env.BLACKPAYMENTS_PUBLIC_KEY"), 'O servidor não lê a Public Key BlackPayments.');
-assert(server.includes("process.env.BLACKPAYMENTS_SECRET_KEY"), 'O servidor não lê a Secret Key BlackPayments.');
-assert(server.includes("`${BLACKPAYMENTS_PUBLIC_KEY}:${BLACKPAYMENTS_SECRET_KEY}`"), 'O servidor não combina Public Key e Secret Key.');
-assert(server.includes("Buffer.from(credentials, 'utf8').toString('base64')"), 'O servidor não codifica o par no HTTP Basic.');
-assert(!server.includes('BLACKPAYMENTS_BASIC_AUTH'), 'A variável de autenticação antiga ainda está presente.');
-assert(server.includes("'https://api.blackpayments.pro/v1'"), 'A base da API BlackPayments está incorreta.');
-assert(server.includes("`${BLACKPAYMENTS_API_URL}/transactions`"), 'O endpoint de transações está incorreto.');
-assert(server.includes("paymentMethod: 'pix'"), 'O payload não define PIX.');
-assert(server.includes("const title = 'Venda Online';"), 'O servidor não padroniza o título dos itens como Venda Online.');
-assert(server.includes('transaction.pix.qrcode'), 'O servidor não lê pix.qrcode da resposta.');
-assert(server.includes('number: payerCpf'), 'O servidor não envia o CPF real validado.');
-assert(server.includes('email: DEFAULT_CUSTOMER_EMAIL'), 'O e-mail padronizado não está restrito ao backend.');
-assert(server.includes('phone: DEFAULT_CUSTOMER_PHONE'), 'O telefone padronizado não está restrito ao backend.');
-assert(!server.includes("require('cors')"), 'O servidor ainda depende de hospedagem separada por CORS.');
-assert(!server.includes('express.static(__dirname)'), 'O servidor está expondo os arquivos da raiz do repositório.');
-
-assert(packageJson.scripts && packageJson.scripts.start === 'node server.js', 'Comando start inválido.');
-for (const dependency of ['axios', 'dotenv', 'express', 'openai', 'socket.io']) {
-  assert(packageJson.dependencies && packageJson.dependencies[dependency], `Dependência ausente: ${dependency}`);
+{
+  "name": "blackpayments-pix-chat-server",
+  "version": "1.0.0",
+  "description": "Servidor unificado para checkout PIX BlackPayments e chat em tempo real",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js",
+    "validate": "node validate_package.js",
+    "test:pix": "node test_pix_integration.js",
+    "test:auth": "node test_blackpayments_auth.js"
+  },
+  "keywords": [
+    "pix",
+    "blackpayments",
+    "checkout",
+    "socket.io"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.19.2",
+    "openai": "^4.52.1",
+    "socket.io": "^4.7.5"
+  }
 }
-assert(!packageJson.dependencies.cors, 'A dependência CORS ainda está presente.');
-assert(renderYaml.includes('name: checkout-blackpayments'), 'Nome do serviço Render incorreto.');
-assert(renderYaml.includes('runtime: node'), 'Runtime Node não foi declarado no Blueprint.');
-assert(renderYaml.includes('buildCommand: npm ci'), 'Build Command do Render incorreto.');
-assert(renderYaml.includes('startCommand: npm start'), 'Start Command do Render incorreto.');
-assert(renderYaml.includes('healthCheckPath: /api/health'), 'Health Check do Render incorreto.');
-assert(!renderYaml.includes('envVars:'), 'O Blueprint ainda exige variáveis no painel do Render.');
-
-assert(envFile.includes('BLACKPAYMENTS_PUBLIC_KEY=pk_'), 'O .env versionado não contém a Public Key de teste.');
-assert(envFile.includes('BLACKPAYMENTS_SECRET_KEY=sk_'), 'O .env versionado não contém a Secret Key de teste.');
-assert(!envFile.includes('BLACKPAYMENTS_BASIC_AUTH='), 'O .env ainda contém a variável de autenticação antiga.');
-assert(envFile.includes('BLACKPAYMENTS_API_URL=https://api.blackpayments.pro/v1'), 'A API BlackPayments não está configurada no .env.');
-assert(envExample.includes('BLACKPAYMENTS_PUBLIC_KEY=COLOQUE_AQUI_A_PUBLIC_KEY'), 'O modelo não contém a Public Key.');
-assert(envExample.includes('BLACKPAYMENTS_SECRET_KEY=COLOQUE_AQUI_A_SECRET_KEY'), 'O modelo não contém a Secret Key.');
-assert(!gitignore.split(/\r?\n/).includes('.env'), 'O .env continua bloqueado pelo .gitignore.');
-
-console.log(`Validação concluída: ${inlineScripts.length} scripts inline, backend unificado e arquivos do Render aprovados.`);
