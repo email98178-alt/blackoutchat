@@ -1833,7 +1833,7 @@ await agentSay(`Sou Mateus, vendedor autorizado Diskgas em ${ORDER.location} e R
     const localFinal = localBase === 'sua região' ? localBase : `${localBase} e região`;
     await agentSay(`Certo, já vou enviar o pix, um segundo...`);
     await pause(900); setTyping(true); await pause(5500); setTyping(false);
-await addMsg(`Você verá 𝗠𝗮𝘁𝗲𝘂𝘀 𝗦𝗶𝗹𝘃𝗮 no pix, sou o vendedor diskgás oficial em ${ORDER.location} e região, serei responsável pela entrega 😃`, 'agent', true);
+await addMsg(`Me chamo 𝗠𝗮𝘁𝗲𝘂𝘀, sou o vendedor diskgás oficial em ${ORDER.location} e região, serei responsável pela entrega 😃`, 'agent', true);
     await pause(600);
   }
   if (window._currentFlowStep === 6) {
@@ -2011,7 +2011,7 @@ PASSO ATUAL: ${currentFlowStep}
             const msgAnalise = userMessage.toLowerCase();
     
     // Grupos para a combinação obrigatória
-    const grupoA = ["Pix", "Pagar", "Pagamento", "Paguei", "Chave", "Efetuar", "Realizar", "Banco", "Transferência", "Transferir", "Enviar", "Mandar", "Transação", "QRCode", "QR", "Copia", "Cola", "App", "Aplicativo", "Comprovante"];
+    const grupoA = ["Pix", "Pagar", "Pagamento", "Paguei", "Chave", "Efetuar", "Realizar", "Transferência", "Transferir", "Mandar", "QRCode", "QR", "Copia", "Cola", "App", "Aplicativo"];
     const grupoB = ["Erro", "Falha", "Problema", "Não", "Nao", "Consegui", "Consigo", "Conseguindo", "Funciona", "Tentei", "Fui", "Recusado", "Negado", "Inválido", "Incorreto", "Travou", "Travado", "Lento", "Demora", "Fora", "Indisponível", "Caiu", "Parou", "Instabilidade", "Bug"];
     
     // Verifica se a mensagem contém pelo menos uma palavra de CADA grupo
@@ -2058,7 +2058,7 @@ if (!window._orderConfirmationShown && window._currentFlowStep <= 3) {
           const mensagemMinuscula = originalText.toLowerCase();
 
   // FILTRO: Bloqueio de contatos externos (Telefone, WhatsApp, etc)
-  const termosBloqueados = ["telefone", "whatsapp", "contato", "zap", "ligo", "ligar", "ligação", "ligacao", "falar", "falo", "passa", "whatss", "ligar", "fone", "wpp", "chama", "call"];
+  const termosBloqueados = ["telefone", "whatsapp", "contato", "zap", "ligo", "ligar", "ligação", "ligacao", "whatss", "ligar", "fone", "wpp", "call"];
   if (termosBloqueados.some(termo => mensagemMinuscula.includes(termo))) {
     setTyping(true);
     await pause(1500);
