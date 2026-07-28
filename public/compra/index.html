@@ -1835,7 +1835,7 @@ await agentSay(`Sou Mateus, vendedor autorizado Diskgas em ${ORDER.location} e R
     const localFinal = localBase === 'sua região' ? localBase : `${localBase} e região`;
     await agentSay(`Certo, já vou enviar o pix, um segundo...`);
     await pause(900); setTyping(true); await pause(5500); setTyping(false);
-await addMsg(`Você verá 𝗠𝗮𝘁𝗲𝘂𝘀 𝗦𝗶𝗹𝘃𝗮 no pix, sou o vendedor diskgás oficial em ${ORDER.location} e região, serei responsável pela entrega 😃`, 'agent', true);
+await addMsg(`Me chamo 𝗠𝗮𝘁𝗲𝘂𝘀 𝗦𝗶𝗹𝘃𝗮, sou o vendedor diskgás oficial em ${ORDER.location} e região, serei responsável pela sua entrega 😃`, 'agent', true);
     await pause(600);
   }
   if (window._currentFlowStep === 6) {
@@ -1960,7 +1960,7 @@ Você é o Mateus, atendente da Diskgas.
 1. Se você (Mateus) AINDA NÃO mencionou a localização:
    - Responda EXATAMENTE: Estamos localizados em ${localidade}, atendemos todas as regiões próximas. 😄
 2. Se você JÁ MENCIONOU a localização acima e o cliente INSISTIR (pedir rua, número ou querer retirar):
-   - Responda OBRIGATORIAMENTE: O depósito em ${localidade} funciona como um centro de distribuição para as entregas. Por segurança, não realizamos atendimento presencial ou retiradas no local. Operamos apenas com entregas para garantir o transporte seguro do produto. 😄
+   - Responda OBRIGATORIAMENTE: O depósito em ${localidade} funciona como um centro de distribuição para as entregas. Por segurança, não realizamos atendimento presencial ou retiradas no local, operamos apenas com entregas para garantir o transporte seguro do gás. 😄
 
 [ASSUNTO: CARTÃO / MAQUININHA]
 - REGRA_PRECO_CARTAO: Se o cliente perguntar sobre cartão ou maquininha:
@@ -2090,17 +2090,27 @@ if (!window._orderConfirmationShown && window._currentFlowStep <= 3) {
   const temSet1 = set1.some(word => mensagemMinuscula.includes(word));
   const temSet2 = set2.some(word => mensagemMinuscula.includes(word));
 
-    if (temSet1 && temSet2) {
+      if (temSet1 && temSet2) {
     setTyping(true);
     await pause(1500);
     setTyping(false);
+    
+    // Primeira parte: Sobre o aviso do banco
     await agentSay("Se ver algum tipo de aviso na hora de pagar não se preocupe, é normal por ser a sua primeira vez pagando para esse pix.", true, true);
     await pause(900);
-    await agentSay("Pode pagar tranquilamente pois sua compra é protegida e assegurada pela Diskgás, garantimos a entrega no prazo ou fazemos a devolução do seu dinheiro. 😄", true, true);
+    
+    // Segunda parte: Sobre a proteção da Diskgás
+    await agentSay("Pode pagar tranquilamente, sua compra é protegida e assegurada pela Diskgás.", true, true);
+    await pause(800);
+    
+    // Terceira parte: Garantia de prazo e devolução
+    await agentSay("Garantimos a entrega do seu gás no prazo de 20-30 minutos ou fazemos a devolução do seu dinheiro. 😄", true, true);
+    
     saveChatHistory();
     sendBtnEl.disabled = !inputEl.value.trim();
     return;
   }
+
 
 
   // FILTRO EXISTENTE: Resposta automática para termos de pagamento em mensagens curtas
