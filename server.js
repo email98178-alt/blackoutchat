@@ -178,7 +178,7 @@ const openai = process.env.OPENAI_API_KEY
   : null;
 
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, service: 'diskgas-checkout' });
+  res.json({ ok: true, service: 'compra-checkout' });
 });
 
 app.post('/api/chat', async (req, res) => {
@@ -259,7 +259,7 @@ app.post('/api/pix', limitPixRequests, async (req, res) => {
       });
     }
 
-    const externalRef = `diskgas-${requestId}`;
+    const externalRef = `compra-${requestId}`;
     const payload = {
       amount,
       paymentMethod: 'pix',
@@ -279,7 +279,7 @@ app.post('/api/pix', limitPixRequests, async (req, res) => {
         },
       },
       externalRef,
-      metadata: JSON.stringify({ source: 'diskgas-checkout', requestId }),
+      metadata: JSON.stringify({ source: 'compra-checkout', requestId }),
       ...(PIX_POSTBACK_URL ? { postbackUrl: PIX_POSTBACK_URL } : {}),
     };
 
