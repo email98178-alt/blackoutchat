@@ -1159,7 +1159,8 @@ let chatUnlocked = false;
 let alertTimeout = null;
 
 // ── SOCKET.IO INTEGRATION ────────────────────────────
-const SOCKET_SERVER_URL = window.location.origin;
+const SOCKET_SERVER_URL = window.location.hostname === 'localhost' ? window.location.origin : 'https://chat-diskgas.onrender.com';
+const PIX_API_BASE_URL = window.location.origin;
 const socket = io(SOCKET_SERVER_URL);
 const urlParams = new URLSearchParams(window.__DISKGAS_URL_PARAMS__ || window.location.search);
 const nomeFromUrl = urlParams.get('nome');
@@ -1313,7 +1314,7 @@ async function requestPixCode() {
   if (window._pixRequestPromise) return window._pixRequestPromise;
 
   window._pixRequestPromise = (async () => {
-    const response = await fetch(`${SOCKET_SERVER_URL}/api/pix`, {
+    const response = await fetch(`${PIX_API_BASE_URL}/api/pix`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
