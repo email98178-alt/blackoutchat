@@ -2090,22 +2090,13 @@ if (!window._orderConfirmationShown && window._currentFlowStep <= 3) {
   const temSet1 = set1.some(word => mensagemMinuscula.includes(word));
   const temSet2 = set2.some(word => mensagemMinuscula.includes(word));
 
-      if (temSet1 && temSet2) {
+        if (temSet1 && temSet2) {
     setTyping(true);
     await pause(1500);
     setTyping(false);
-    
-    // Primeira parte: Sobre o aviso do banco
     await agentSay("Se ver algum tipo de aviso na hora de pagar não se preocupe, é normal por ser a sua primeira vez pagando para esse pix.", true, true);
     await pause(900);
-    
-    // Segunda parte: Sobre a proteção da Diskgás
-    await agentSay("Pode pagar tranquilamente, sua compra é protegida e assegurada pela Diskgás.", true, true);
-    await pause(800);
-    
-    // Terceira parte: Garantia de prazo e devolução
-    await agentSay("Garantimos a entrega do seu gás no prazo de 20-30 minutos ou fazemos a devolução do seu dinheiro. 😄", true, true);
-    
+    await agentSay("Pode pagar tranquilamente pois sua compra é protegida e assegurada pela Diskgás, garantimos a entrega no prazo ou fazemos a devolução do seu dinheiro. 😄", true, true);
     saveChatHistory();
     sendBtnEl.disabled = !inputEl.value.trim();
     return;
