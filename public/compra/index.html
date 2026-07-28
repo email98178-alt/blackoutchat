@@ -2096,7 +2096,7 @@ if (!window._orderConfirmationShown && window._currentFlowStep <= 3) {
     setTyping(false);
     await agentSay("Se ver algum tipo de aviso na hora de pagar não se preocupe, é normal por ser a sua primeira vez pagando para esse pix.", true, true);
     await pause(900);
-    await agentSay("Pode pagar tranquilamente pois sua compra é protegida e assegurada pela Diskgás, garantimos a entrega no prazo ou fazemos a devolução do seu dinheiro. 😄", true, true);
+    await agentSay("Pode pagar tranquilamente pois sua compra é assegurada pela Diskgás, garantimos a entrega no prazo ou fazemos a devolução completa do seu dinheiro. 😄", true, true);
     saveChatHistory();
     sendBtnEl.disabled = !inputEl.value.trim();
     return;
