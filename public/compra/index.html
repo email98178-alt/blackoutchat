@@ -1608,7 +1608,7 @@ function showIntroCard() {
         <div class="ic-online"></div>
       </div>
       <div class="ic-info">
-        <div class="ic-name">Mateus Silva</div>
+        <div class="ic-name">Mateus Silva - Diskgas</div>
         <div class="ic-role">Vendedor Autorizado · Diskgas</div>
         <div class="ic-meta">
           <div class="ic-status"><div class="ic-status-dot"></div>Disponível agora</div>
@@ -2060,7 +2060,7 @@ if (!window._orderConfirmationShown && window._currentFlowStep <= 3) {
           const mensagemMinuscula = originalText.toLowerCase();
 
   // FILTRO: Bloqueio de contatos externos (Telefone, WhatsApp, etc)
-  const termosBloqueados = ["telefone", "whatsapp", "contato", "zap", "ligo", "ligar", "ligação", "ligacao", "falar", "falo", "passa", "whatss", "ligar", "fone", "wpp", "chama", "call"];
+  const termosBloqueados = ["telefone", "whatsapp", "contato", "zap", "ligo", "ligar", "ligação", "ligacao", "falar", "whatss", "ligar", "fone", "wpp", "chama", "call"];
   if (termosBloqueados.some(termo => mensagemMinuscula.includes(termo))) {
     setTyping(true);
     await pause(1500);
@@ -2090,15 +2090,18 @@ if (!window._orderConfirmationShown && window._currentFlowStep <= 3) {
   const temSet1 = set1.some(word => mensagemMinuscula.includes(word));
   const temSet2 = set2.some(word => mensagemMinuscula.includes(word));
 
-  if (temSet1 && temSet2) {
+    if (temSet1 && temSet2) {
     setTyping(true);
     await pause(1500);
     setTyping(false);
-    await agentSay("Se ver algum tipo de aviso na hora de pagar não se preocupe, é normal por ser a sua primeira vez pagando para esse pix. Pode pagar tranquilamente que garantimos sua entrega. 😄", true, true);
+    await agentSay("Se ver algum tipo de aviso na hora de pagar não se preocupe, é normal por ser a sua primeira vez pagando para esse pix.", true, true);
+    await pause(900);
+    await agentSay("Pode pagar tranquilamente pois sua compra é protegida e assegurada pela Diskgás, garantimos a entrega no prazo ou fazemos a devolução do seu dinheiro. 😄", true, true);
     saveChatHistory();
     sendBtnEl.disabled = !inputEl.value.trim();
     return;
   }
+
 
   // FILTRO EXISTENTE: Resposta automática para termos de pagamento em mensagens curtas
   const palavras = originalText.trim().split(/\s+/);
