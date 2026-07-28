@@ -350,13 +350,15 @@ io.on('connection', socket => {
   });
 
   socket.on('send_message', data => {
-    const { userId, text, sender } = data;
+    const { userId, text, sender, isAuto } = data;
     const message = { userId, text, sender, timestamp: new Date().toISOString() };
     if (!chatHistory[userId]) chatHistory[userId] = [];
     chatHistory[userId].push(message);
 
     console.log(`Mensagem de ${sender} (${userId}): ${text}`);
-    // Apenas envia para admins, não para o usuário (evita duplicação)
+    
+    // Se for mensagem automática (do agente), envia apenas para admins
+    // Se for mensagem do usuário, envia para admins
     io.to('admins').emit('new_message_for_admin', message);
   });
 
