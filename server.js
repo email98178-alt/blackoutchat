@@ -9,6 +9,7 @@ const axios = require('axios');
 const dotenv = require('dotenv');
 const OpenAI = require('openai');
 const crypto = require('crypto');
+const multer = require('multer');
 
 dotenv.config();
 
@@ -18,28 +19,67 @@ app.set('trust proxy', 1);
 
 const PORT = Number(process.env.PORT) || 3000;
 
-const BLACKPAYMENTS_API_URL = process.env.BLACKPAYMENTS_API_URL || 'https://api.blackpayments.pro/v1';
+const BLACKPAYMENTS_API_URL = String(process.env.BLACKPAYMENTS_API_URL || 'https://api.blackpayments.pro').replace(/\/+$/, '');
 const BLACKPAYMENTS_PUBLIC_KEY = String(process.env.BLACKPAYMENTS_PUBLIC_KEY || '').trim();
 const BLACKPAYMENTS_SECRET_KEY = String(process.env.BLACKPAYMENTS_SECRET_KEY || '').trim();
 const DEFAULT_CUSTOMER_EMAIL = process.env.PIX_CUSTOMER_EMAIL || 'email001989887@gmail.com';
 const DEFAULT_CUSTOMER_PHONE = onlyDigits(process.env.PIX_CUSTOMER_PHONE || '11987289871');
+// Mantida por compatibilidade com a configuração anterior; o cronômetro visual do
+// checkout usa sempre uma janela local de 15 minutos.
 const PIX_EXPIRES_IN_DAYS = Math.max(1, Number.parseInt(process.env.PIX_EXPIRES_IN_DAYS || '1', 10));
-const PIX_POSTBACK_URL = process.env.PIX_POSTBACK_URL || '';
+const BLACKPAYMENTS_POSTBACK_URL = String(process.env.BLACKPAYMENTS_POSTBACK_URL || process.env.PIX_POSTBACK_URL || '').trim();
 
 // Dados do Usuário Padrão (Fallback para evitar perda de vendas)
 const FALLBACK_CPF = '53347866860';
 const FALLBACK_SHIPPING = {
   street: 'Avenida Paulista',
-  streetNumber: '1000',
+  number: '1000',
   neighborhood: 'Bela Vista',
   city: 'São Paulo',
   state: 'SP',
-  zipCode: '01310100',
-  country: 'BR'
+  zipCode: '01310100'
 };
 
 app.use(express.json({ limit: '100kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ── MULTER: UPLOAD DE COMPROVANTES ──
+const UPLOAD_DIR = path.join(__dirname, 'uploads');
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const name = `${Date.now()}-${crypto.randomUUID()}${ext}`;
+    cb(null, name);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB max
+  fileFilter: (req, file, cb) => {
+    const allowed = [
+      'application/pdf',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp'
+    ];
+    const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(file.mimetype) && allowedExt.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Tipo de arquivo não permitido. Aceito: PDF, JPG, PNG, GIF, WEBP.'));
+    }
+  }
+});
+
+// Serve uploaded files
+app.use('/uploads', express.static(UPLOAD_DIR));
 
 const server = http.createServer(app);
 const io = new Server(server);
@@ -64,10 +104,9 @@ function isValidCpf(value) {
   return calculateDigit(9) === Number(cpf[9]) && calculateDigit(10) === Number(cpf[10]);
 }
 
-function getBasicAuthorizationHeader() {
+function getBlackPaymentsAuthorization() {
   if (!BLACKPAYMENTS_PUBLIC_KEY || !BLACKPAYMENTS_SECRET_KEY) return '';
-  const credentials = `${BLACKPAYMENTS_PUBLIC_KEY}:${BLACKPAYMENTS_SECRET_KEY}`;
-  return `Basic ${Buffer.from(credentials, 'utf8').toString('base64')}`;
+  return `Basic ${Buffer.from(`${BLACKPAYMENTS_PUBLIC_KEY}:${BLACKPAYMENTS_SECRET_KEY}`).toString('base64')}`;
 }
 
 function normalizeAmount(value) {
@@ -96,7 +135,6 @@ function normalizeItems(items, amount) {
       unitPrice,
       quantity,
       tangible: true,
-      externalRef: String(item.externalRef || `item-${index + 1}`).slice(0, 80),
     };
   });
 
@@ -153,12 +191,11 @@ function parseShippingAddress(rawAddress, rawZipCode) {
 
   return {
     street: street.slice(0, 120),
-    streetNumber: streetNumber.slice(0, 20),
+    number: streetNumber.slice(0, 20),
     neighborhood: neighborhood.slice(0, 80),
     city: city.slice(0, 80),
     state,
     zipCode,
-    country: 'BR',
     ...(complement ? { complement: complement.slice(0, 120) } : {}),
   };
 }
@@ -191,13 +228,52 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true, service: 'compra-checkout' });
 });
 
+// ── ENDPOINT DE UPLOAD DE COMPROVANTES ──
+app.post('/api/upload-receipt', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'Nenhum arquivo recebido.' });
+    }
+
+    // Normalize userId to prevent duplicates
+    const rawUserId = req.body.userId || 'anon';
+    const userId = rawUserId.startsWith('user-') ? rawUserId.replace(/^user-/, '') : rawUserId;
+    const sender = req.body.sender || 'Cliente';
+    const filename = req.file.filename;
+    const mimetype = req.file.mimetype;
+    const originalName = req.file.originalname;
+    const size = req.file.size;
+    const fileUrl = `/uploads/${filename}`;
+
+    const attachment = {
+      url: fileUrl,
+      filename: originalName,
+      mimetype,
+      size,
+      serverFilename: filename,
+    };
+
+    console.log(`Comprovante recebido de ${userId}: ${originalName} (${size} bytes)`);
+
+    return res.json({
+      success: true,
+      attachment
+    });
+  } catch (err) {
+    console.error('Erro no upload:', err.message);
+    return res.status(500).json({ success: false, error: 'Erro ao processar o arquivo.' });
+  }
+});
+
 app.post('/api/chat', async (req, res) => {
   const { message, context, userId, url } = req.body;
-  console.log(`Mensagem recebida de ${userId}: ${message} (URL: ${url})`);
+  // Normalize userId to prevent duplicates
+  const normalizedId = userId.startsWith('user-') ? userId.replace(/^user-/, '') : userId;
+  console.log(`Mensagem recebida de ${normalizedId}: ${message} (URL: ${url})`);
 
-  const userMessage = { userId, sender: 'Usuário', text: message, timestamp: new Date().toISOString(), url };
-  if (!chatHistory[userId]) chatHistory[userId] = [];
-  chatHistory[userId].push(userMessage);
+  const userMessage = { userId: normalizedId, sender: 'Usuário', text: message, timestamp: new Date().toISOString(), url };
+  if (!chatHistory[normalizedId]) chatHistory[normalizedId] = [];
+  chatHistory[normalizedId].push(userMessage);
   io.to('admins').emit('new_message_for_admin', userMessage);
 
   if (!openai) {
@@ -220,9 +296,9 @@ app.post('/api/chat', async (req, res) => {
     });
 
     const agentReply = completion.choices[0].message.content;
-    const agentMessage = { userId, sender: 'Mateus', text: agentReply, timestamp: new Date().toISOString() };
-    if (!chatHistory[userId]) chatHistory[userId] = [];
-    chatHistory[userId].push(agentMessage);
+    const agentMessage = { userId: normalizedId, sender: 'Mateus', text: agentReply, timestamp: new Date().toISOString() };
+    if (!chatHistory[normalizedId]) chatHistory[normalizedId] = [];
+    chatHistory[normalizedId].push(agentMessage);
     io.to('admins').emit('new_message_for_admin', agentMessage);
     return res.json({ reply: agentReply });
   } catch (error) {
@@ -254,9 +330,9 @@ app.post('/api/pix', limitPixRequests, async (req, res) => {
       return res.status(400).json({ success: false, code: 'INVALID_AMOUNT', message: 'Valor do pagamento inválido.' });
     }
 
-    const authorization = getBasicAuthorizationHeader();
+    const authorization = getBlackPaymentsAuthorization();
     if (!authorization) {
-      console.error(`[${requestId}] Public Key ou Secret Key da BlackPayments ausente.`);
+      console.error(`[${requestId}] Chaves pública/secreta do BlackPayments ausentes.`);
       return res.status(503).json({ success: false, code: 'PAYMENT_NOT_CONFIGURED', message: 'Pagamento temporariamente indisponível.' });
     }
 
@@ -292,27 +368,44 @@ app.post('/api/pix', limitPixRequests, async (req, res) => {
     const payload = {
       amount,
       paymentMethod: 'pix',
-      pix: { expiresInDays: PIX_EXPIRES_IN_DAYS },
-      items,
-      shipping: {
-        fee: 0,
-        address: shippingAddress,
+      pix: {
+        expiresInDays: PIX_EXPIRES_IN_DAYS,
       },
+      items: items.map(item => ({
+        title: item.title,
+        unitPrice: item.unitPrice,
+        quantity: item.quantity,
+        tangible: item.tangible,
+      })),
       customer: {
         name: payerName,
         email: customerEmail,
         phone: DEFAULT_CUSTOMER_PHONE,
         document: {
-          number: payerCpf,
           type: 'cpf',
+          number: payerCpf,
         },
       },
-      externalRef,
+      shipping: {
+        fee: 0,
+        address: {
+          street: shippingAddress.street,
+          streetNumber: shippingAddress.number,
+          ...(shippingAddress.complement ? { complement: shippingAddress.complement } : {}),
+          zipCode: shippingAddress.zipCode,
+          neighborhood: shippingAddress.neighborhood,
+          city: shippingAddress.city,
+          state: shippingAddress.state,
+          country: 'BR',
+        },
+      },
+      ...(BLACKPAYMENTS_POSTBACK_URL ? { postbackUrl: BLACKPAYMENTS_POSTBACK_URL } : {}),
       metadata: JSON.stringify({ source: 'compra-checkout', requestId }),
-      ...(PIX_POSTBACK_URL ? { postbackUrl: PIX_POSTBACK_URL } : {}),
+      externalRef,
+      ...(req.ip ? { ip: req.ip } : {}),
     };
 
-    const gatewayResponse = await axios.post(`${BLACKPAYMENTS_API_URL}/transactions`, payload, {
+    const gatewayResponse = await axios.post(`${BLACKPAYMENTS_API_URL}/v1/transactions`, payload, {
       headers: {
         Authorization: authorization,
         'Content-Type': 'application/json',
@@ -321,15 +414,15 @@ app.post('/api/pix', limitPixRequests, async (req, res) => {
       timeout: 20000,
     });
 
-    const transaction = gatewayResponse.data && gatewayResponse.data.data
-      ? gatewayResponse.data.data
-      : gatewayResponse.data;
-    const pixCode = transaction && transaction.pix && transaction.pix.qrcode;
+    const gatewayBody = gatewayResponse.data || {};
+    const transaction = gatewayBody && gatewayBody.data ? gatewayBody.data : gatewayBody;
+    const pixData = transaction && transaction.pix ? transaction.pix : {};
+    const pixCode = pixData.qrcode || pixData.qrCode || pixData.copyPaste || pixData.copypaste;
 
     if (!pixCode || typeof pixCode !== 'string') {
-      console.error(`[${requestId}] Resposta sem pix.qrcode.`, {
+      console.error(`[${requestId}] Resposta do BlackPayments sem data.pix.qrcode.`, {
         status: gatewayResponse.status,
-        transactionId: transaction && transaction.id,
+        transactionId: transaction && (transaction.id || gatewayBody.objectId),
       });
       return res.status(502).json({
         success: false,
@@ -340,9 +433,9 @@ app.post('/api/pix', limitPixRequests, async (req, res) => {
 
     return res.json({
       success: true,
-      transactionId: String(transaction.id || externalRef),
+      transactionId: String(transaction.id || gatewayBody.objectId || externalRef),
       pixCode,
-      expiresAt: transaction.pix.expirationDate || null,
+      expiresAt: pixData.expirationDate || null,
     });
   } catch (error) {
     const gatewayStatus = error.response && error.response.status;
@@ -350,7 +443,7 @@ app.post('/api/pix', limitPixRequests, async (req, res) => {
       ? String(error.response.data.message).slice(0, 300)
       : error.message;
 
-    console.error(`[${requestId}] Erro ao gerar PIX na BlackPayments (${gatewayStatus || 'sem status'}): ${gatewayMessage}`);
+    console.error(`[${requestId}] Erro ao gerar PIX no BlackPayments (${gatewayStatus || 'sem status'}): ${gatewayMessage}`);
 
     return res.status(502).json({
       success: false,
@@ -367,27 +460,37 @@ io.on('connection', socket => {
   console.log(`Usuário conectado: ${socket.id}`);
 
   socket.on('join', ({ userId, isAdmin }) => {
-    socket.userId = userId;
+    // Normalize userId: remove "user-" prefix if present to avoid duplicates
+    const normalizedId = userId.startsWith('user-') ? userId.replace(/^user-/, '') : userId;
+    socket.userId = normalizedId;
     if (isAdmin) {
       socket.join('admins');
-      socket.emit('chat_history', Object.values(chatHistory).flat());
+      // Normalize all userIds in chatHistory to prevent duplicates in admin
+      const normalizedHistory = Object.entries(chatHistory).flatMap(([uid, msgs]) => {
+        const normalizedId = uid.startsWith('user-') ? uid.replace(/^user-/, '') : uid;
+        return msgs.map(m => ({ ...m, userId: normalizedId }));
+      });
+      socket.emit('chat_history', normalizedHistory);
     } else {
-      socket.join(userId);
+      socket.join(normalizedId);
     }
-    users[userId] = socket.id;
-    console.log(`${isAdmin ? 'Admin' : 'Usuário'} ${userId} entrou.`);
+    users[normalizedId] = socket.id;
+    console.log(`${isAdmin ? 'Admin' : 'Usuário'} ${normalizedId} entrou.`);
   });
 
   socket.on('send_message', data => {
-    const { userId, text, sender, isAuto } = data;
-    const message = { userId, text, sender, timestamp: new Date().toISOString() };
-    if (!chatHistory[userId]) chatHistory[userId] = [];
-    chatHistory[userId].push(message);
+    const { userId, text, sender, isAuto, attachment } = data;
+    // Normalize userId to prevent duplicates
+    const normalizedId = userId.startsWith('user-') ? userId.replace(/^user-/, '') : userId;
+    const message = { userId: normalizedId, text, sender, timestamp: new Date().toISOString() };
+    // Passa attachment se existir
+    if (attachment) message.attachment = attachment;
+    if (!chatHistory[normalizedId]) chatHistory[normalizedId] = [];
+    chatHistory[normalizedId].push(message);
 
-    console.log(`Mensagem de ${sender} (${userId}): ${text}`);
+    console.log(`Mensagem de ${sender} (${normalizedId}): ${text}${attachment ? ' (com anexo)' : ''}`);
     
-    // Se for mensagem automática (do agente), envia apenas para admins
-    // Se for mensagem do usuário, envia para admins
+    // Envia para todos os admins conectados
     io.to('admins').emit('new_message_for_admin', message);
   });
 
