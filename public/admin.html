@@ -110,6 +110,7 @@
 
         .chat-list-item:hover { background: var(--bg-primary); }
         .chat-list-item.unread { background: var(--pix-bg); border-color: var(--pix-color); }
+        .chat-list-item.has-receipt { border-left: 3px solid var(--primary); }
 
         .chat-list-item .user-id { font-weight: 600; font-size: 0.9rem; color: var(--primary); display: block; margin-bottom: 4px; }
         .chat-list-item .last-msg { font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -192,12 +193,144 @@
         }
         .pix-label { background: var(--pix-color); color: #78350f; font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-bottom: 6px; display: inline-block; }
 
+        /* ===== ATTACHMENT BLOCK ===== */
+        .attachment-block {
+            max-width: 80%; align-self: flex-start;
+            background: #fff; border: 1px solid var(--border-color); border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            overflow: visible; min-width: 220px;
+        }
+        .attachment-block .attachment-header {
+            padding: 12px 14px 8px; border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .attachment-block .attachment-header-icon {
+            width: 36px; height: 36px; border-radius: 8px;
+            background: var(--message-user); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .attachment-block .attachment-header-icon svg { color: var(--primary); width: 18px; height: 18px; }
+        .attachment-block .attachment-header-info { flex: 1; min-width: 0; }
+        .attachment-block .attachment-header-info .att-filename {
+            font-size: 0.85rem; font-weight: 600; color: var(--text-primary);
+            word-break: break-word; line-height: 1.3;
+        }
+        .attachment-block .attachment-header-info .att-meta {
+            font-size: 0.7rem; color: var(--text-tertiary); margin-top: 2px;
+        }
+        .attachment-block img.attachment-preview {
+            max-width: 100%; max-height: 300px; display: block; cursor: pointer;
+            border-top: 1px solid var(--border-color);
+        }
+        .attachment-block .attachment-actions-row {
+            padding: 10px 14px; display: flex; align-items: center; gap: 8px;
+            border-top: 1px solid var(--border-color); background: #fafbfc;
+        }
+        .attachment-block .attachment-actions-row a {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 7px 14px; border-radius: 7px; font-size: 0.8rem; font-weight: 600;
+            text-decoration: none; transition: all 0.2s;
+        }
+        .attachment-block .attachment-actions-row a.view-btn {
+            background: var(--primary); color: #fff;
+        }
+        .attachment-block .attachment-actions-row a.view-btn:hover { background: var(--primary-dark); }
+        .attachment-block .attachment-actions-row a.download-btn {
+            background: #f0f9ff; color: var(--primary); border: 1px solid #bae6fd;
+        }
+        .attachment-block .attachment-actions-row a.download-btn:hover { background: #e0f2fe; }
+        .attachment-block .attachment-actions-row a svg { width: 15px; height: 15px; }
+
+        /* ===== SECTION HEADERS ===== */
+        .section-header {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 12px; font-size: 0.75rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            color: var(--text-tertiary); border-bottom: 1px solid var(--border-color);
+        }
+        .section-header .section-badge {
+            background: var(--primary); color: #fff; border-radius: 10px;
+            padding: 1px 8px; font-size: 0.65rem; font-weight: 700;
+        }
+        .section-header.receipt-header .section-badge { background: var(--success); }
+        .section-header.pix-header .section-badge { background: var(--pix-color); color: #78350f; }
+        .section-header.other-header .section-badge { background: var(--text-tertiary); }
+        .section-empty {
+            padding: 16px; text-align: center; font-size: 0.8rem;
+            color: var(--text-tertiary); font-style: italic;
+        }
+
+        /* ===== MOBILE BOTTOM NAV ===== */
+        .mobile-nav {
+            display: none; position: fixed; bottom: 0; left: 0; right: 0;
+            background: var(--bg-secondary); border-top: 1px solid var(--border-color);
+            z-index: 900; padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+        }
+        .mobile-nav-inner {
+            display: flex; justify-content: space-around;
+        }
+        .mobile-nav-btn {
+            flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+            padding: 6px 0; background: none; border: none; cursor: pointer;
+            color: var(--text-tertiary); font-size: 0.65rem; font-weight: 600;
+            transition: color 0.2s; font-family: 'Inter', sans-serif;
+        }
+        .mobile-nav-btn.active { color: var(--primary); }
+        .mobile-nav-btn svg { width: 22px; height: 22px; }
+        .mobile-nav-btn .nav-count {
+            background: var(--primary); color: #fff; border-radius: 8px;
+            padding: 0 5px; font-size: 0.6rem; min-width: 16px; text-align: center;
+            position: absolute; top: -4px; right: -2px;
+        }
+        .mobile-nav-btn { position: relative; }
+
+        /* ===== MOBILE VIEW: CONVERSATIONS ===== */
+        .mobile-conversations {
+            display: none; position: fixed; inset: 0; top: 0; bottom: 56px;
+            background: var(--bg-primary); z-index: 950; overflow-y: auto;
+        }
+        .mobile-conversations.active { display: block; }
+        .mobile-conversations .mobile-header {
+            background: var(--primary); color: white; padding: 16px;
+            position: sticky; top: 0; z-index: 10;
+        }
+        .mobile-conversations .mobile-header h3 { font-size: 1rem; margin-bottom: 2px; }
+        .mobile-conversations .mobile-header p { font-size: 0.75rem; opacity: 0.8; }
+
+        /* ===== MOBILE VIEW: MODAL FULL SCREEN ===== */
+        .mobile-modal {
+            display: none; position: fixed; inset: 0; bottom: 56px;
+            background: var(--bg-primary); z-index: 950; overflow-y: auto;
+        }
+        .mobile-modal.active { display: block; }
+        .mobile-modal-header {
+            background: var(--primary); color: white; padding: 14px 16px;
+            position: sticky; top: 0; z-index: 10;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .mobile-modal-header h3 { font-size: 0.9rem; }
+        .mobile-modal-header .modal-close-btn {
+            background: rgba(255,255,255,0.2); border: none; color: white;
+            width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .mobile-modal-body {
+            padding: 16px; display: flex; flex-direction: column; gap: 12px;
+            padding-bottom: 24px;
+        }
+
         /* RESPONSIVE */
         @media (max-width: 768px) {
             .sidebar { width: 100%; height: 100vh; border-right: none; }
             .layout { flex-direction: column; }
             .main-content { display: none; }
-            .modal-content { width: 95%; height: 90vh; }
+            .modal-overlay { display: none !important; }
+            .mobile-nav { display: block; }
+            body { overflow: auto; }
+            .attachment-block { max-width: 100%; min-width: 0; }
+            .attachment-block img.attachment-preview { max-height: 200px; }
+            .attachment-block .attachment-actions-row { flex-wrap: wrap; }
+            .attachment-block .attachment-actions-row a { flex: 1; justify-content: center; }
+            .message { max-width: 95%; }
         }
     </style>
 </head>
@@ -224,6 +357,52 @@
         </main>
     </div>
 
+    <!-- MOBILE: Conversations list with sections -->
+    <div class="mobile-conversations active" id="mobile-conversations">
+        <div class="mobile-header">
+            <h3>Diskgas Admin</h3>
+            <p id="mobile-connection-status">Conectando...</p>
+        </div>
+        <div class="search-box" style="padding:12px;border-bottom:1px solid var(--border-color);background:white;">
+            <input type="text" id="mobile-user-search" placeholder="Buscar usuário..." style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border-color);outline:none;background:var(--bg-primary);font-family:'Inter',sans-serif;">
+        </div>
+        <div class="chat-list-container" id="mobile-chat-list" style="padding-bottom:70px;"></div>
+    </div>
+
+    <!-- MOBILE: Full-screen modal for chat details -->
+    <div class="mobile-modal" id="mobile-modal">
+        <div class="mobile-modal-header">
+            <h3 id="mobile-modal-title">Usuário</h3>
+            <div style="display:flex;gap:8px;">
+                <button class="modal-close-btn" onclick="copyUserJsonMobile()" title="Copiar JSON">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+                <button class="modal-close-btn" onclick="closeMobileModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+        </div>
+        <div class="mobile-modal-body" id="mobile-modal-body"></div>
+    </div>
+
+    <!-- MOBILE BOTTOM NAV -->
+    <nav class="mobile-nav" id="mobile-nav">
+        <div class="mobile-nav-inner">
+            <button class="mobile-nav-btn active" onclick="switchMobileTab('conversations')" id="nav-conversations">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>Conversas</span>
+            </button>
+            <button class="mobile-nav-btn" onclick="switchMobileTab('receipts')" id="nav-receipts">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                <span>Comprovantes</span>
+            </button>
+            <button class="mobile-nav-btn" onclick="switchMobileTab('pix')" id="nav-pix">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                <span>PIX</span>
+            </button>
+        </div>
+    </nav>
+
     <div class="modal-overlay" id="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -245,6 +424,8 @@
 
         socket.on('connect', () => {
             document.getElementById('connection-status').textContent = 'Conectado';
+            const mobileStatus = document.getElementById('mobile-connection-status');
+            if (mobileStatus) mobileStatus.textContent = 'Conectado';
             socket.emit('join', { userId: 'admin_' + Math.random(), isAdmin: true });
         });
 
@@ -255,13 +436,19 @@
                 allChats[msg.userId].push(msg);
             });
             renderChatList();
+            renderMobileChatList();
         });
 
         socket.on('new_message_for_admin', (message) => {
+            console.log('[ADMIN] Mensagem recebida:', JSON.stringify(message));
             if (!allChats[message.userId]) { allChats[message.userId] = []; chatReadStatus[message.userId] = false; }
             allChats[message.userId].push(message);
             chatReadStatus[message.userId] = false;
             renderChatList();
+            renderMobileChatList();
+            if (message.attachment) {
+                console.log('[ADMIN] Comprovante recebido com attachment:', JSON.stringify(message.attachment));
+            }
         });
 
         function setActiveFilter(filter) {
@@ -280,7 +467,8 @@
             });
 
             users.forEach(userId => {
-                const isPix = allChats[userId].some(m => m.text && m.text.toLowerCase().includes('verá'));
+                const isPix = allChats[userId].some(m => m.text && m.sender === 'Mateus' && (m.text.toLowerCase().includes('aprovado automaticamente') || m.text.toLowerCase().includes('pix gerado') || m.text.toLowerCase().includes('após o pagamento')));
+                const hasReceipt = allChats[userId].some(m => m.attachment);
                 if (activeFilter === 'pix' && !isPix) return;
                 if (activeFilter === 'normal' && isPix) return;
 
@@ -288,11 +476,77 @@
                 const time = new Date(lastMsg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 
                 const item = document.createElement('div');
-                item.className = `chat-list-item ${!chatReadStatus[userId] ? 'unread' : ''}`;
+                item.className = `chat-list-item ${!chatReadStatus[userId] ? 'unread' : ''} ${hasReceipt ? 'has-receipt' : ''}`;
                 item.onclick = () => openModal(userId);
-                item.innerHTML = `<span class="user-id">${userId}</span><p class="last-msg">${lastMsg.text}</p><span class="time">${time}</span>${!chatReadStatus[userId] ? '<div class="unread-indicator"></div>' : ''}`;
+                item.innerHTML = `<span class="user-id">${hasReceipt ? '📎 ' : ''}${userId}</span><p class="last-msg">${lastMsg.text}</p><span class="time">${time}</span>${!chatReadStatus[userId] ? '<div class="unread-indicator"></div>' : ''}`;
                 container.appendChild(item);
             });
+        }
+
+        async function prepareWhatsAppImageFile(fileUrl, originalFilename) {
+            const response = await fetch(fileUrl, { credentials: 'same-origin' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const sourceBlob = await response.blob();
+            if (!sourceBlob.type.startsWith('image/')) throw new Error('O arquivo não é uma imagem.');
+
+            let imageBlob = sourceBlob;
+            if (sourceBlob.type !== 'image/jpeg') {
+                const bitmap = await createImageBitmap(sourceBlob);
+                const canvas = document.createElement('canvas');
+                canvas.width = bitmap.width;
+                canvas.height = bitmap.height;
+                const context = canvas.getContext('2d', { alpha: false });
+                context.drawImage(bitmap, 0, 0);
+                if (typeof bitmap.close === 'function') bitmap.close();
+                imageBlob = await new Promise((resolve, reject) => {
+                    canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Falha ao converter a imagem.')), 'image/jpeg', 0.92);
+                });
+            }
+
+            const baseName = String(originalFilename || 'comprovante')
+                .replace(/\\.[^.]+$/, '')
+                .replace(/[^a-zA-Z0-9_-]+/g, '_')
+                .replace(/^_+|_+$/g, '') || 'comprovante';
+            const filename = `${baseName}.jpg`;
+            const file = new File([imageBlob], filename, { type: 'image/jpeg', lastModified: Date.now() });
+            return { file, filename, imageBlob };
+        }
+
+        async function downloadImageAsWhatsAppPhoto(fileUrl, originalFilename) {
+            try {
+                const { imageBlob, filename } = await prepareWhatsAppImageFile(fileUrl, originalFilename);
+                const objectUrl = URL.createObjectURL(imageBlob);
+                const link = document.createElement('a');
+                link.href = objectUrl;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+            } catch (error) {
+                console.error('Erro ao preparar imagem para o WhatsApp:', error);
+                alert('Não foi possível converter a imagem. Tente usar o botão Visualizar e salve a imagem como JPG.');
+            }
+        }
+
+        async function shareImageAsWhatsAppPhoto(fileUrl, originalFilename) {
+            try {
+                const { file } = await prepareWhatsAppImageFile(fileUrl, originalFilename);
+                const shareData = { files: [file], title: 'Comprovante', text: '' };
+                const canShareFiles = navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }));
+
+                if (!canShareFiles) {
+                    alert('Este navegador não permite compartilhar a imagem diretamente. Use “Baixar imagem (JPG)” e, no WhatsApp, selecione a imagem pela Galeria/Fotos, não por Documentos.');
+                    return;
+                }
+
+                await navigator.share(shareData);
+            } catch (error) {
+                if (error && error.name === 'AbortError') return;
+                console.error('Erro ao compartilhar imagem como foto:', error);
+                alert('Não foi possível abrir o compartilhamento nativo. Use “Baixar imagem (JPG)” e selecione a imagem pela Galeria/Fotos no WhatsApp.');
+            }
         }
 
         function openModal(userId) {
@@ -310,10 +564,80 @@
                 area.appendChild(block);
             }
 
-            allChats[userId].forEach(msg => {
-                const isPix = msg.text && msg.text.toLowerCase().includes('verá');
+            for (const msg of allChats[userId]) {
+                const isPix = msg.text && msg.sender === 'Mateus' && (msg.text.toLowerCase().includes('aprovado automaticamente') || msg.text.toLowerCase().includes('pix gerado') || msg.text.toLowerCase().includes('após o pagamento'));
                 const time = new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 const div = document.createElement('div');
+
+                // Check for attachment
+                if (msg.attachment) {
+                    div.className = 'attachment-block';
+                    const isImage = msg.attachment.mimetype && msg.attachment.mimetype.startsWith('image/');
+                    const fileUrl = msg.attachment.url;
+                    const filename = msg.attachment.filename || 'Arquivo';
+                    const sizeKb = msg.attachment.size ? (msg.attachment.size / 1024).toFixed(1) + ' KB' : '';
+                    const hasValidUrl = fileUrl && fileUrl.startsWith('/uploads/');
+
+                    let imgHtml = '';
+                    if (isImage && hasValidUrl) {
+                        imgHtml = `<img class="attachment-preview" src="${fileUrl}" alt="${filename}" onclick="window.open('${fileUrl}','_blank')" onerror="this.style.display='none'">`;
+                    }
+
+                    const iconSvg = isImage
+                        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`
+                        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`;
+
+                    div.innerHTML = `
+                        <div class="attachment-header">
+                            <div class="attachment-header-icon">${iconSvg}</div>
+                            <div class="attachment-header-info">
+                                <div class="att-filename">${filename}</div>
+                                <div class="att-meta">${sizeKb} · Enviado por <strong>${msg.sender}</strong> às ${time}</div>
+                            </div>
+                        </div>
+                        ${imgHtml}
+                        ${hasValidUrl ? `<div class="attachment-actions-row">
+                            <a href="${fileUrl}" target="_blank" class="view-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                Visualizar
+                            </a>
+                            ${isImage ? `<a href="#" class="download-btn image-share-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                                Compartilhar como foto
+                            </a>` : ''}
+                            <a href="${fileUrl}" download="${filename}" class="download-btn image-download-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                ${isImage ? 'Baixar imagem (JPG)' : 'Baixar arquivo'}
+                            </a>
+                        </div>` : `<div class="attachment-actions-row"><span style="font-size:0.75rem;color:#ef4444;">Arquivo sem URL disponível no servidor</span></div>`}
+                    `;
+
+                    const imageShareLink = div.querySelector('.image-share-link');
+                    if (imageShareLink) {
+                        imageShareLink.onclick = event => {
+                            event.preventDefault();
+                            shareImageAsWhatsAppPhoto(fileUrl, filename);
+                        };
+                    }
+
+                    const imageDownloadLink = div.querySelector('.image-download-link');
+                    if (imageDownloadLink) {
+                        imageDownloadLink.onclick = event => {
+                            event.preventDefault();
+                            downloadImageAsWhatsAppPhoto(fileUrl, filename);
+                        };
+                    }
+                    
+                    // Also show the message text as a separate bubble above
+                    if (msg.text && msg.text.trim()) {
+                        const textDiv = document.createElement('div');
+                        textDiv.className = 'message user';
+                        textDiv.innerHTML = `<strong>${msg.sender}:</strong> ${msg.text}<span class="meta">${time}</span>`;
+                        area.appendChild(textDiv);
+                    }
+                    area.appendChild(div);
+                    continue; // Skip the normal append at the end
+                }
                 if (isPix) {
                     div.className = 'pix-highlight-block';
                     div.innerHTML = `<span class="pix-label">💳 Pix Gerado</span><div class="content"><strong>${msg.sender}:</strong> ${msg.text}</div><span class="meta">${time}</span>`;
@@ -322,7 +646,7 @@
                     div.innerHTML = `<strong>${msg.sender}:</strong> ${msg.text}<span class="meta">${time}</span>`;
                 }
                 area.appendChild(div);
-            });
+            }
             
             chatReadStatus[userId] = true;
             renderChatList();
@@ -344,7 +668,8 @@
                     sender: msg.sender,
                     text: msg.text,
                     timestamp: msg.timestamp,
-                    url: msg.url || undefined // Inclui URL apenas se existir
+                    url: msg.url || undefined,
+                    attachment: msg.attachment || undefined
                 }))
             };
 
@@ -353,6 +678,213 @@
                 .catch(err => console.error('Erro ao copiar JSON:', err));
         }
 
+        // ===== MOBILE TABS =====
+        let mobileTab = 'conversations';
+
+        function switchMobileTab(tab) {
+            mobileTab = tab;
+            document.querySelectorAll('.mobile-nav-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('nav-' + tab).classList.add('active');
+            renderMobileChatList();
+        }
+
+        function renderMobileChatList() {
+            const container = document.getElementById('mobile-chat-list');
+            const search = (document.getElementById('mobile-user-search').value || '').toLowerCase();
+            container.innerHTML = '';
+
+            if (mobileTab === 'conversations') {
+                renderMobileSection(container, 'Todas as Conversas', 'other-header', null, search);
+            } else if (mobileTab === 'receipts') {
+                renderMobileSection(container, 'Comprovantes Enviados', 'receipt-header', 'hasReceipt', search);
+            } else if (mobileTab === 'pix') {
+                renderMobileSection(container, 'PIX Gerados (sem comprovante)', 'pix-header', 'hasPix', search);
+            }
+        }
+
+        function renderMobileSection(container, title, headerClass, filterType, search) {
+            // Header
+            const header = document.createElement('div');
+            header.className = 'section-header ' + headerClass;
+            header.innerHTML = title;
+            container.appendChild(header);
+
+            // Filter and sort users
+            const users = Object.keys(allChats).filter(id => id.toLowerCase().includes(search)).sort((a, b) => {
+                return new Date(allChats[b][allChats[b].length-1].timestamp) - new Date(allChats[a][allChats[a].length-1].timestamp);
+            });
+
+            let filteredUsers = users;
+            if (filterType === 'hasReceipt') {
+                filteredUsers = users.filter(uid => allChats[uid].some(m => m.attachment));
+            } else if (filterType === 'hasPix') {
+                filteredUsers = users.filter(uid => allChats[uid].some(m => m.text && m.sender === 'Mateus' && (m.text.toLowerCase().includes('aprovado automaticamente') || m.text.toLowerCase().includes('pix gerado') || m.text.toLowerCase().includes('após o pagamento'))) && !allChats[uid].some(m => m.attachment));
+            }
+
+            if (filteredUsers.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'section-empty';
+                empty.textContent = 'Nenhum usuário encontrado.';
+                container.appendChild(empty);
+                return;
+            }
+
+            filteredUsers.forEach(userId => {
+                const isPix = allChats[userId].some(m => m.text && m.sender === 'Mateus' && (m.text.toLowerCase().includes('aprovado automaticamente') || m.text.toLowerCase().includes('pix gerado') || m.text.toLowerCase().includes('após o pagamento')));
+                const hasReceipt = allChats[userId].some(m => m.attachment);
+                const lastMsg = allChats[userId][allChats[userId].length - 1];
+                const time = new Date(lastMsg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                const item = document.createElement('div');
+                item.className = `chat-list-item ${!chatReadStatus[userId] ? 'unread' : ''} ${hasReceipt ? 'has-receipt' : ''}`;
+                item.onclick = () => openMobileModal(userId);
+
+                let statusBadge = '';
+                if (hasReceipt) {
+                    statusBadge = '<span style="font-size:0.6rem;background:var(--success);color:#fff;padding:1px 6px;border-radius:8px;margin-left:6px;">Comprovante</span>';
+                } else if (isPix) {
+                    statusBadge = '<span style="font-size:0.6rem;background:var(--pix-color);color:#78350f;padding:1px 6px;border-radius:8px;margin-left:6px;">PIX</span>';
+                }
+
+                item.innerHTML = `<span class="user-id">${userId} ${statusBadge}</span><p class="last-msg">${lastMsg.text}</p><span class="time">${time}</span>${!chatReadStatus[userId] ? '<div class="unread-indicator"></div>' : ''}`;
+                container.appendChild(item);
+            });
+        }
+
+        function openMobileModal(userId) {
+            currentOpenedUserId = userId;
+            document.getElementById('mobile-modal-title').textContent = `Usuário: ${userId}`;
+            const body = document.getElementById('mobile-modal-body');
+            body.innerHTML = '';
+
+            // URL block
+            const firstWithUrl = allChats[userId].find(m => m.url);
+            if (firstWithUrl) {
+                const block = document.createElement('div');
+                block.className = 'url-info-block';
+                block.innerHTML = `<strong>🔗 URL de Origem:</strong><a href="${firstWithUrl.url}" target="_blank" class="url-info-link">${firstWithUrl.url}</a>`;
+                body.appendChild(block);
+            }
+
+            // Messages
+            for (const msg of allChats[userId]) {
+                const isPix = msg.text && msg.sender === 'Mateus' && (msg.text.toLowerCase().includes('aprovado automaticamente') || msg.text.toLowerCase().includes('pix gerado') || msg.text.toLowerCase().includes('após o pagamento'));
+                const time = new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                if (msg.attachment) {
+                    const isImage = msg.attachment.mimetype && msg.attachment.mimetype.startsWith('image/');
+                    const fileUrl = msg.attachment.url;
+                    const filename = msg.attachment.filename || 'Arquivo';
+                    const sizeKb = msg.attachment.size ? (msg.attachment.size / 1024).toFixed(1) + ' KB' : '';
+                    const hasValidUrl = fileUrl && fileUrl.startsWith('/uploads/');
+
+                    const iconSvg = isImage
+                        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`
+                        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`;
+
+                    const block = document.createElement('div');
+                    block.className = 'attachment-block';
+                    let imgHtml = '';
+                    if (isImage && hasValidUrl) {
+                        imgHtml = `<img class="attachment-preview" src="${fileUrl}" alt="${filename}" onclick="window.open('${fileUrl}','_blank')" onerror="this.style.display='none'">`;
+                    }
+                    block.innerHTML = `
+                        <div class="attachment-header">
+                            <div class="attachment-header-icon">${iconSvg}</div>
+                            <div class="attachment-header-info">
+                                <div class="att-filename">${filename}</div>
+                                <div class="att-meta">${sizeKb} · Enviado por <strong>${msg.sender}</strong> às ${time}</div>
+                            </div>
+                        </div>
+                        ${imgHtml}
+                        ${hasValidUrl ? `<div class="attachment-actions-row">
+                            <a href="${fileUrl}" target="_blank" class="view-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                Visualizar
+                            </a>
+                            ${isImage ? `<a href="#" class="download-btn image-share-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                                Compartilhar como foto
+                            </a>` : ''}
+                            <a href="${fileUrl}" download="${filename}" class="download-btn image-download-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                ${isImage ? 'Baixar imagem (JPG)' : 'Baixar arquivo'}
+                            </a>
+                        </div>` : `<div class="attachment-actions-row"><span style="font-size:0.75rem;color:#ef4444;">Arquivo sem URL disponível no servidor</span></div>`}
+                    `;
+
+                    const imageShareLink = block.querySelector('.image-share-link');
+                    if (imageShareLink) {
+                        imageShareLink.onclick = event => {
+                            event.preventDefault();
+                            shareImageAsWhatsAppPhoto(fileUrl, filename);
+                        };
+                    }
+
+                    const imageDownloadLink = block.querySelector('.image-download-link');
+                    if (imageDownloadLink) {
+                        imageDownloadLink.onclick = event => {
+                            event.preventDefault();
+                            downloadImageAsWhatsAppPhoto(fileUrl, filename);
+                        };
+                    }
+
+                    if (msg.text && msg.text.trim()) {
+                        const textDiv = document.createElement('div');
+                        textDiv.className = 'message user';
+                        textDiv.innerHTML = `<strong>${msg.sender}:</strong> ${msg.text}<span class="meta">${time}</span>`;
+                        body.appendChild(textDiv);
+                    }
+                    body.appendChild(block);
+                    continue;
+                }
+
+                const div = document.createElement('div');
+                if (isPix) {
+                    div.className = 'pix-highlight-block';
+                    div.innerHTML = `<span class="pix-label">💳 Pix Gerado</span><div class="content"><strong>${msg.sender}:</strong> ${msg.text}</div><span class="meta">${time}</span>`;
+                } else {
+                    div.className = `message ${msg.sender === 'Mateus' ? 'agent' : 'user'}`;
+                    div.innerHTML = `<strong>${msg.sender}:</strong> ${msg.text}<span class="meta">${time}</span>`;
+                }
+                body.appendChild(div);
+            }
+
+            chatReadStatus[userId] = true;
+            renderMobileChatList();
+            document.getElementById('mobile-modal').classList.add('active');
+            body.scrollTop = body.scrollHeight;
+        }
+
+        function closeMobileModal() {
+            document.getElementById('mobile-modal').classList.remove('active');
+            currentOpenedUserId = null;
+        }
+
+        function copyUserJsonMobile() {
+            if (!currentOpenedUserId) return;
+            const msgWithUrl = allChats[currentOpenedUserId].find(m => m.url);
+            if (!msgWithUrl || !msgWithUrl.url) { alert('URL não encontrada para este usuário.'); return; }
+            const dataToCopy = {
+                userId: currentOpenedUserId,
+                originUrl: msgWithUrl.url,
+                chatHistory: allChats[currentOpenedUserId].map(msg => ({
+                    sender: msg.sender,
+                    text: msg.text,
+                    timestamp: msg.timestamp,
+                    url: msg.url || undefined,
+                    attachment: msg.attachment || undefined
+                }))
+            };
+            navigator.clipboard.writeText(JSON.stringify(dataToCopy, null, 2))
+                .then(() => alert('JSON do usuário copiado!'))
+                .catch(err => console.error('Erro ao copiar JSON:', err));
+        }
+
+        // Search events for mobile
+        document.getElementById('mobile-user-search').addEventListener('keyup', renderMobileChatList);
+
+        // Desktop search
         document.getElementById('user-search').addEventListener('keyup', renderChatList);
 
         // Ajustar o URL do socket para o mesmo domínio do Render
