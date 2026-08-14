@@ -1,30 +1,17 @@
 {
-  "name": "blackpayments-pix-chat-server",
+  "name": "blackpayments-pix-checkout",
   "version": "1.0.0",
-  "description": "Servidor unificado para checkout PIX BlackPayments e chat em tempo real",
+  "private": true,
+  "description": "Checkout PIX integrado ao BlackPayments",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "check": "node --check server.js",
-    "validate": "node validate_package.js",
-    "test:pix": "node test_pix_integration.js",
-    "test:auth": "node test_blackpayments_auth.js"
-  },
-  "keywords": [
-    "pix",
-    "blackpayments",
-    "checkout",
-    "socket.io"
-  ],
-  "author": "",
-  "license": "MIT",
-  "engines": {
-    "node": ">=20"
+    "start": "node server.js"
   },
   "dependencies": {
     "axios": "^1.6.0",
     "dotenv": "^16.3.1",
     "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
     "openai": "^4.52.1",
     "socket.io": "^4.7.5"
   }
