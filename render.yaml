@@ -1,8 +1,0 @@
-services:
-  - type: web
-    name: checkout-blackpayments
-    runtime: node
-    plan: free
-    buildCommand: npm ci
-    startCommand: npm start
-    healthCheckPath: /api/health
