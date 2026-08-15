@@ -1362,6 +1362,34 @@ let unread = 0;
 let chatUnlocked = false;
 let alertTimeout = null;
 
+// ── LEMBRETES DE COMPROVANTE ─────────────────────────
+// Os horários são calculados a partir do instante real em que o PIX foi gerado.
+// O timestamp fica persistido para que o fluxo continue após recarregar a página.
+const RECEIPT_REMINDER_SCHEDULE = [
+  {
+    key: 'receiptReminder1',
+    flag: '_receiptReminder1Sent',
+    delay: 1 * 60 * 1000,
+    message: (saudacao) => `${saudacao}Após o pagamento peço que envie o comprovante para agilizarmos sua entrega! 😃`
+  },
+  {
+    key: 'receiptReminder2',
+    flag: '_receiptReminder2Sent',
+    delay: 3 * 60 * 1000,
+    message: (saudacao) => `${saudacao}Após o envio do comprovante de pagamento a aprovação é imediata. Estou no aguardo! 😃`
+  },
+  {
+    key: 'receiptReminder3',
+    flag: '_receiptReminder3Sent',
+    delay: 5 * 60 * 1000,
+    message: (saudacao) => `${saudacao}Estou aguardando o comprovante para liberar seu pedido. Assim que enviar, seguimos com a entrega! 😃`
+  }
+];
+window._receiptReminderTimers = {};
+window._receiptReminderInFlight = {};
+window._pixGeneratedAt = null;
+window._receiptUploaded = false;
+
 // ── SOCKET.IO INTEGRATION ────────────────────────────
 const SOCKET_SERVER_URL = window.location.origin;
 const socket = io(SOCKET_SERVER_URL);
@@ -1827,6 +1855,8 @@ receiptFileInput.addEventListener('change', async (e) => {
   console.log('Comprovante emitido via socket para admin');
 
   if (uploaded) {
+    window._receiptUploaded = true;
+    cancelReceiptReminderTimers();
     saveChatHistory();
 
     // START TIMER: 5 minutes after receipt upload
@@ -1913,6 +1943,9 @@ function saveChatHistory() {
     orderConfirmationShown: window._orderConfirmationShown || false,
     receiptReminder1Sent: window._receiptReminder1Sent || false,
     receiptReminder2Sent: window._receiptReminder2Sent || false,
+    receiptReminder3Sent: window._receiptReminder3Sent || false,
+    receiptUploaded: window._receiptUploaded || false,
+    pixGeneratedAt: window._pixGeneratedAt || null,
     receiptDeliveryMsgSent: window._receiptDeliveryMsgSent || false,
     pixExpiresAt: window._currentPixExpiresAt || null
   };
@@ -2285,6 +2318,77 @@ async function agentSay(text, newGroup=false, immediateTyping=false) {
   addMsg(text, 'agent', newGroup); 
 }
 
+function addReceiptReminderButton() {
+  const agentBubbles = msgsEl.querySelectorAll('.row.agent .bubble.a');
+  const lastBubble = agentBubbles[agentBubbles.length - 1];
+  if (!lastBubble || lastBubble.querySelector('.receipt-reminder-btn')) return;
+
+  const btn = document.createElement('button');
+  btn.className = 'receipt-reminder-btn';
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Enviar Comprovante';
+  btn.onclick = () => { receiptModalOverlay.classList.add('on'); };
+
+  const metaEl = lastBubble.querySelector('.b-meta');
+  if (metaEl) metaEl.parentElement.insertBefore(btn, metaEl);
+  else lastBubble.appendChild(btn);
+}
+
+function cancelReceiptReminderTimers() {
+  Object.keys(window._receiptReminderTimers || {}).forEach((key) => {
+    const timer = window._receiptReminderTimers[key];
+    if (timer) clearTimeout(timer);
+  });
+  window._receiptReminderTimers = {};
+}
+
+async function sendReceiptReminder(reminder) {
+  if (window._paymentConfirmed || window._receiptUploaded || window[reminder.flag] || window._receiptReminderInFlight[reminder.key]) return;
+
+  window._receiptReminderInFlight[reminder.key] = true;
+  try {
+    const nome = (ORDER.nome || '').split(' ')[0] || '';
+    const saudacao = nome ? `${nome}, ` : '';
+    await agentSay(reminder.message(saudacao), true, true);
+    window[reminder.flag] = true;
+    addReceiptReminderButton();
+    saveChatHistory();
+  } finally {
+    delete window._receiptReminderInFlight[reminder.key];
+  }
+}
+
+function scheduleReceiptReminder(reminder) {
+  if (!window._pixGeneratedAt || window._paymentConfirmed || window._receiptUploaded || window[reminder.flag]) return;
+
+  if (window._receiptReminderTimers[reminder.key]) {
+    clearTimeout(window._receiptReminderTimers[reminder.key]);
+  }
+
+  const targetTime = Number(window._pixGeneratedAt) + reminder.delay;
+  const remaining = Math.max(0, targetTime - Date.now());
+  window._receiptReminderTimers[reminder.key] = setTimeout(async () => {
+    window._receiptReminderTimers[reminder.key] = null;
+    try {
+      await sendReceiptReminder(reminder);
+    } catch (error) {
+      console.error(`Erro ao enviar lembrete ${reminder.key}:`, error);
+      // Se o envio falhar, tenta novamente sem criar uma segunda mensagem.
+      if (!window._paymentConfirmed && !window._receiptUploaded && !window[reminder.flag]) {
+        window._receiptReminderTimers[reminder.key] = setTimeout(() => scheduleReceiptReminder(reminder), 15000);
+      }
+    }
+  }, remaining);
+}
+
+function scheduleReceiptReminders() {
+  if (!window._pixGeneratedAt || window._paymentConfirmed || window._receiptUploaded) return;
+  RECEIPT_REMINDER_SCHEDULE.forEach(scheduleReceiptReminder);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') scheduleReceiptReminders();
+});
+
 async function runConversation(startStep = 0) {
   const { location } = ORDER;
   const gr = getGreeting();
@@ -2383,73 +2487,23 @@ addProfessionalStatusCard();
 
 
     
-    // 4. Finaliza o passo do fluxo
-    window._currentFlowStep = 9; 
+    // 4. Finaliza o passo do fluxo e inicia os três lembretes a partir
+    // do instante em que o PIX foi efetivamente exibido ao cliente.
+    window._currentFlowStep = 9;
+    window._pixGeneratedAt = Date.now();
+    window._receiptReminder1Sent = false;
+    window._receiptReminder2Sent = false;
+    window._receiptReminder3Sent = false;
+    window._receiptUploaded = false;
+    cancelReceiptReminderTimers();
     saveChatHistory();
+    scheduleReceiptReminders();
 
-    // ── LEMBRETES AMIGÁVEIS ──
-    // Lembrete 1: 1 min após o PIX — suporte proativo
-    setTimeout(async () => {
-      if (!window._paymentConfirmed && !window._receiptReminder1Sent) {
-        window._receiptReminder1Sent = true;
-        const nome = (ORDER.nome || '').split(' ')[0] || '';
-        const saudacao = nome ? `${nome}, ` : '';
-        await agentSay(`${saudacao}Após o pagamento peço que envie o comprovante para agilizarmos sua entrega! 😃`, true, true);
-        // Adiciona botão de enviar comprovante logo abaixo da mensagem
-        setTimeout(() => {
-          const lastBubble = msgsEl.querySelector('.row.agent:last-child .bubble.a');
-          if (lastBubble && !lastBubble.querySelector('.receipt-reminder-btn')) {
-            const btn = document.createElement('button');
-            btn.className = 'receipt-reminder-btn';
-            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Enviar Comprovante';
-            btn.onclick = () => { receiptModalOverlay.classList.add('on'); };
-            const metaEl = lastBubble.querySelector('.b-meta');
-            if (metaEl) {
-              metaEl.parentElement.insertBefore(btn, metaEl);
-            } else {
-              lastBubble.appendChild(btn);
-            }
-          }
-        }, 300);
-        saveChatHistory();
-      }
-    }, 1 * 60 * 1000);
-
-    // Lembrete 2: 3 min após o PIX — benefício + comprovante
-    setTimeout(async () => {
-      if (!window._paymentConfirmed && !window._receiptReminder2Sent) {
-        window._receiptReminder2Sent = true;
-        const nome = (ORDER.nome || '').split(' ')[0] || '';
-        const saudacao = nome ? `${nome}, ` : '';
-        await agentSay(`${saudacao}Após o envio do comprovante de pagamento a aprovação é imediata. Estou no aguardo! 😃`, true, true);
-        // Adiciona botão de enviar comprovante logo abaixo da mensagem
-        setTimeout(() => {
-          const lastBubble = msgsEl.querySelector('.row.agent:last-child .bubble.a');
-          if (lastBubble && !lastBubble.querySelector('.receipt-reminder-btn')) {
-            const btn = document.createElement('button');
-            btn.className = 'receipt-reminder-btn';
-            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Enviar Comprovante';
-            btn.onclick = () => { receiptModalOverlay.classList.add('on'); };
-            const metaEl = lastBubble.querySelector('.b-meta');
-            if (metaEl) {
-              metaEl.parentElement.insertBefore(btn, metaEl);
-            } else {
-              lastBubble.appendChild(btn);
-            }
-          }
-        }, 300);
-        saveChatHistory();
-      }
-    }, 3 * 60 * 1000);
-
-    // Timer de segurança (reexibe o card após 5 min se o usuário ainda não pagou)
+    // Timer de segurança: reexibe o card após 5 min se o usuário ainda não pagou.
     setTimeout(() => {
-      if (!window._paymentConfirmed) {
-        // Só adiciona se o card não estiver visível (evita duplicados)
-        if (!document.querySelector('.payment-status-card')) {
-            addProfessionalStatusCard();
-            saveChatHistory();
-        }
+      if (!window._paymentConfirmed && !window._receiptUploaded && !document.querySelector('.payment-status-card')) {
+        addProfessionalStatusCard();
+        saveChatHistory();
       }
     }, 5 * 60 * 1000);
 
@@ -2783,9 +2837,22 @@ function lockBackButton() {
     const state = JSON.parse(savedState);
         if (state.lojaAddress) window._lojaAddress = state.lojaAddress;
     window._orderConfirmationShown = state.orderConfirmationShown || false;
-    window._currentPixCode = state.pixCode; window._pixCopyTimer = null; window._pixPaymentTimer = null; window._pixCopyReminderSent = false; window._pixPaymentReminderSent = false;
-    lastSender = state.lastSender; window._currentFlowStep = state.flowStep || 0; window._paymentConfirmed = state.paymentConfirmed || false; window._contactMsgSent = state.contactMsgSent || false; window._pixCopyClicked = state.pixCopyClicked || false; window._pixCopyReminderSent = state.pixCopyReminderSent || false; window._pixPaymentReminderSent = state.pixPaymentReminderSent || false; window._receiptReminder1Sent = state.receiptReminder1Sent || false; window._receiptReminder2Sent = state.receiptReminder2Sent || false; window._receiptDeliveryMsgSent = state.receiptDeliveryMsgSent || false; window._currentPixExpiresAt = state.pixExpiresAt || null;
+window._currentPixCode = state.pixCode; window._pixCopyTimer = null; window._pixPaymentTimer = null; window._pixCopyReminderSent = false; window._pixPaymentReminderSent = false;
+    lastSender = state.lastSender; window._currentFlowStep = state.flowStep || 0; window._paymentConfirmed = state.paymentConfirmed || false; window._contactMsgSent = state.contactMsgSent || false; window._pixCopyClicked = state.pixCopyClicked || false; window._pixCopyReminderSent = state.pixCopyReminderSent || false; window._pixPaymentReminderSent = state.pixPaymentReminderSent || false; window._receiptReminder1Sent = state.receiptReminder1Sent || false; window._receiptReminder2Sent = state.receiptReminder2Sent || false; window._receiptReminder3Sent = state.receiptReminder3Sent || false; window._receiptUploaded = state.receiptUploaded || false; window._pixGeneratedAt = state.pixGeneratedAt || null; window._receiptDeliveryMsgSent = state.receiptDeliveryMsgSent || false; window._currentPixExpiresAt = state.pixExpiresAt || null;
     msgsEl.innerHTML = savedHTML;
+
+    // Migração de sessões antigas: se já existe um comprovante no histórico,
+    // não reenvia lembretes para esse pedido.
+    if (!window._receiptUploaded && savedHTML.includes('Comprovante enviado')) {
+      window._receiptUploaded = true;
+    }
+
+    // Sessões criadas antes deste ajuste não tinham timestamp do PIX.
+    // Usa o momento da restauração como referência para não deixar o fluxo sem lembretes.
+    if (window._currentPixCode && !window._pixGeneratedAt && window._currentFlowStep >= 9) {
+      window._pixGeneratedAt = Date.now();
+      saveChatHistory();
+    }
 
     // Restore attachment data URLs from data attributes for images
     msgsEl.querySelectorAll('.row.user').forEach(row => {
@@ -2872,6 +2939,9 @@ function lockBackButton() {
     }
     msgsEl.querySelectorAll('.intro-card, .m-avatar:not(.ghost)').forEach(el => { el.onclick = openSellerModal; });
     scrollDown(true);
+    if (window._pixGeneratedAt && window._currentFlowStep >= 9) {
+      scheduleReceiptReminders();
+    }
     if (window._currentFlowStep < 9 && window._currentFlowStep !== 99) runConversation(window._currentFlowStep);
   } else {
     const { onReadPromise } = addMsg('Olá! Gostaria de pagar agora via Pix.','user');
