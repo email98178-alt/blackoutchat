@@ -19,70 +19,17 @@ app.set('trust proxy', 1);
 
 const PORT = Number(process.env.PORT) || 3000;
 
-// A API usa a rota canônica /api/v1/transactions. A função abaixo também
-// aceita uma variável BLACKPAYMENTS_API_URL que já contenha /api ou /v1.
-const BLACKPAYMENTS_API_URL = String(
-  process.env.BLACKPAYMENTS_API_URL || 'https://api.blackpayments.pro'
-).trim().replace(/\/+$/, '');
+const BLACKPAYMENTS_API_URL = String(process.env.BLACKPAYMENTS_API_URL || 'https://api.blackpayments.pro').replace(/\/+$/, '');
+const BLACKPAYMENTS_PUBLIC_KEY = String(process.env.BLACKPAYMENTS_PUBLIC_KEY || '').trim();
+const BLACKPAYMENTS_SECRET_KEY = String(process.env.BLACKPAYMENTS_SECRET_KEY || '').trim();
+const DEFAULT_CUSTOMER_EMAIL = process.env.PIX_CUSTOMER_EMAIL || 'email001989887@gmail.com';
+const DEFAULT_CUSTOMER_PHONE = onlyDigits(process.env.PIX_CUSTOMER_PHONE || '11987289871');
+// Mantida por compatibilidade com a configuração anterior; o cronômetro visual do
+// checkout usa sempre uma janela local de 15 minutos.
+const PIX_EXPIRES_IN_DAYS = Math.max(1, Number.parseInt(process.env.PIX_EXPIRES_IN_DAYS || '1', 10));
+const BLACKPAYMENTS_POSTBACK_URL = String(process.env.BLACKPAYMENTS_POSTBACK_URL || process.env.PIX_POSTBACK_URL || '').trim();
 
-const BLACKPAYMENTS_PUBLIC_KEY = String(
-  process.env.BLACKPAYMENTS_PUBLIC_KEY || ''
-).trim();
-
-const BLACKPAYMENTS_SECRET_KEY = String(
-  process.env.BLACKPAYMENTS_SECRET_KEY || ''
-).trim();
-
-const PUBLIC_BASE_URL = String(
-  process.env.PUBLIC_BASE_URL || ''
-).trim().replace(/\/+$/, '');
-
-const DEFAULT_CUSTOMER_EMAIL = String(
-  process.env.PIX_CUSTOMER_EMAIL || 'email001989887@gmail.com'
-).trim();
-
-const DEFAULT_CUSTOMER_PHONE = onlyDigits(
-  process.env.PIX_CUSTOMER_PHONE || '11987289871'
-);
-
-const PIX_EXPIRES_IN_DAYS = Math.max(
-  1,
-  Number.parseInt(process.env.PIX_EXPIRES_IN_DAYS || '1', 10)
-);
-
-const BLACKPAYMENTS_POSTBACK_URL = String(
-  process.env.BLACKPAYMENTS_POSTBACK_URL ||
-  process.env.PIX_POSTBACK_URL ||
-  (PUBLIC_BASE_URL ? `${PUBLIC_BASE_URL}/api/blackpayments/postback` : '')
-).trim();
-
-// Por padrão, exige postback porque esse campo faz parte do contrato de
-// transação usado por essa API. Para contas que comprovadamente aceitam
-// transações sem webhook, use BLACKPAYMENTS_REQUIRE_POSTBACK=false.
-const REQUIRE_POSTBACK = String(
-  process.env.BLACKPAYMENTS_REQUIRE_POSTBACK || 'true'
-).toLowerCase() !== 'false';
-
-function getTransactionsUrl() {
-  if (/\/api\/v1$/i.test(BLACKPAYMENTS_API_URL)) {
-    return `${BLACKPAYMENTS_API_URL}/transactions`;
-  }
-
-  if (/\/api$/i.test(BLACKPAYMENTS_API_URL)) {
-    return `${BLACKPAYMENTS_API_URL}/v1/transactions`;
-  }
-
-  if (/\/v1$/i.test(BLACKPAYMENTS_API_URL)) {
-    return `${BLACKPAYMENTS_API_URL}/transactions`;
-  }
-
-  return `${BLACKPAYMENTS_API_URL}/api/v1/transactions`;
-}
-
-const BLACKPAYMENTS_TRANSACTIONS_URL = getTransactionsUrl();
-
-// Dados do usuário padrão. Eles continuam apenas como fallback de
-// compatibilidade; em produção, prefira exigir os dados reais do comprador.
+// Dados do Usuário Padrão (Fallback para evitar perda de vendas)
 const FALLBACK_CPF = '53347866860';
 const FALLBACK_SHIPPING = {
   street: 'Avenida Paulista',
@@ -123,7 +70,6 @@ const upload = multer({
     ];
     const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp'];
     const ext = path.extname(file.originalname).toLowerCase();
-
     if (allowed.includes(file.mimetype) && allowedExt.includes(ext)) {
       cb(null, true);
     } else {
@@ -132,7 +78,7 @@ const upload = multer({
   }
 });
 
-// Serve uploaded files.
+// Serve uploaded files
 app.use('/uploads', express.static(UPLOAD_DIR));
 
 const server = http.createServer(app);
@@ -140,11 +86,6 @@ const io = new Server(server);
 
 function onlyDigits(value) {
   return String(value || '').replace(/\D/g, '');
-}
-
-function normalizeUserId(value) {
-  const raw = String(value || 'anon');
-  return raw.startsWith('user-') ? raw.replace(/^user-/, '') : raw;
 }
 
 function isValidCpf(value) {
@@ -160,55 +101,27 @@ function isValidCpf(value) {
     return remainder === 10 ? 0 : remainder;
   };
 
-  return calculateDigit(9) === Number(cpf[9]) &&
-    calculateDigit(10) === Number(cpf[10]);
-}
-
-function normalizeEmail(value, cpf) {
-  const email = String(value || '').trim().toLowerCase();
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  if (emailPattern.test(email)) return email.slice(0, 160);
-
-  const [user, domain] = DEFAULT_CUSTOMER_EMAIL.split('@');
-  if (user && domain && emailPattern.test(DEFAULT_CUSTOMER_EMAIL)) {
-    return `${user}+${cpf}@${domain}`.slice(0, 160);
-  }
-
-  return `c${cpf}@cliente-pix.com.br`;
+  return calculateDigit(9) === Number(cpf[9]) && calculateDigit(10) === Number(cpf[10]);
 }
 
 function getBlackPaymentsAuthorization() {
   if (!BLACKPAYMENTS_PUBLIC_KEY || !BLACKPAYMENTS_SECRET_KEY) return '';
-
-  // Basic Auth da API: chave secreta primeiro e chave pública depois.
-  // Formato: Basic base64(sk_userKey:pk_userKey)
-  const credentials = `${BLACKPAYMENTS_SECRET_KEY}:${BLACKPAYMENTS_PUBLIC_KEY}`;
-  return `Basic ${Buffer.from(credentials, 'utf8').toString('base64')}`;
+  return `Basic ${Buffer.from(`${BLACKPAYMENTS_PUBLIC_KEY}:${BLACKPAYMENTS_SECRET_KEY}`).toString('base64')}`;
 }
 
 function normalizeAmount(value) {
   const amount = Number(value);
-  if (!Number.isSafeInteger(amount) || amount <= 0 || amount > 100000000) {
-    return null;
-  }
+  if (!Number.isSafeInteger(amount) || amount <= 0 || amount > 100000000) return null;
   return amount;
 }
 
 function normalizeItems(items, amount) {
   if (!Array.isArray(items) || items.length === 0) {
-    return [{
-      title: 'Venda Online',
-      unitPrice: amount,
-      quantity: 1,
-      tangible: true
-    }];
+    return [{ title: 'Venda Online', unitPrice: amount, quantity: 1, tangible: true }];
   }
 
   const normalized = items.slice(0, 20).map((item, index) => {
-    const title = String(
-      item && (item.title || item.name) || `Item ${index + 1}`
-    ).trim().slice(0, 120);
+    const title = 'Venda Online';
     const unitPrice = Number(item && item.unitPrice);
     const quantity = Number(item && item.quantity);
 
@@ -221,38 +134,20 @@ function normalizeItems(items, amount) {
       title,
       unitPrice,
       quantity,
-      tangible: item && typeof item.tangible === 'boolean'
-        ? item.tangible
-        : true,
-      ...(item && item.externalRef
-        ? { externalRef: String(item.externalRef).slice(0, 120) }
-        : {})
+      tangible: true,
     };
   });
 
-  const itemsTotal = normalized.reduce(
-    (total, item) => total + item.unitPrice * item.quantity,
-    0
-  );
-
-  // Se os itens não fecharem com o valor total, usa um item único para
-  // impedir que o gateway rejeite a transação por divergência matemática.
+  const itemsTotal = normalized.reduce((total, item) => total + item.unitPrice * item.quantity, 0);
   if (itemsTotal !== amount) {
-    return [{
-      title: 'Venda Online',
-      unitPrice: amount,
-      quantity: 1,
-      tangible: true
-    }];
+    return [{ title: 'Venda Online', unitPrice: amount, quantity: 1, tangible: true }];
   }
 
   return normalized;
 }
 
 function parseShippingAddress(rawAddress, rawZipCode) {
-  const address = String(rawAddress || '')
-    .replace(/,?\s*CEP:\s*\d{5}-?\d{3}\s*$/i, '')
-    .trim();
+  const address = String(rawAddress || '').replace(/,?\s*CEP:\s*\d{5}-?\d{3}\s*$/i, '').trim();
   const zipCode = onlyDigits(rawZipCode);
   const parts = address.split(',').map(part => part.trim()).filter(Boolean);
 
@@ -274,30 +169,24 @@ function parseShippingAddress(rawAddress, rawZipCode) {
   let state = '';
   let city = '';
   let cityIndex = -1;
-
   for (let index = parts.length - 1; index >= 1; index -= 1) {
-    const stateMatch = parts[index].match(
-      /^(.*?)\s*(?:\/|\-|–|—)\s*([A-Za-z]{2})$/
-    );
-
-    if (stateMatch) {
-      city = stateMatch[1].trim();
-      state = stateMatch[2].toUpperCase();
+    const match = parts[index].match(/^(.*?)\s*(?:\/|\-|–|—)\s*([A-Za-z]{2})$/);
+    if (match) {
+      city = match[1].trim();
+      state = match[2].toUpperCase();
       cityIndex = index;
       break;
     }
   }
 
-  if (!city || !state) throw new Error('SHIPPING_INVALID');
+  if (!city || !state) {
+    throw new Error('SHIPPING_INVALID');
+  }
 
   const separateNeighborhood = cityIndex > 2 ? parts[cityIndex - 1] : '';
-  const neighborhood = separateNeighborhood ||
-    inlineDetails[inlineDetails.length - 1] || '';
-  const complementParts = separateNeighborhood
-    ? inlineDetails
-    : inlineDetails.slice(0, -1);
+  const neighborhood = separateNeighborhood || inlineDetails[inlineDetails.length - 1] || '';
+  const complementParts = separateNeighborhood ? inlineDetails : inlineDetails.slice(0, -1);
   const complement = complementParts.join(' - ');
-
   if (!street || !neighborhood) throw new Error('SHIPPING_INVALID');
 
   return {
@@ -307,82 +196,22 @@ function parseShippingAddress(rawAddress, rawZipCode) {
     city: city.slice(0, 80),
     state,
     zipCode,
-    ...(complement ? { complement: complement.slice(0, 120) } : {})
-  };
-}
-
-function extractPixCode(gatewayBody, transaction) {
-  const pixData = transaction && transaction.pix
-    ? transaction.pix
-    : gatewayBody && gatewayBody.pix
-      ? gatewayBody.pix
-      : {};
-
-  const candidates = [
-    pixData.qrcodeText,
-    pixData.qrCodeText,
-    pixData.copyPaste,
-    pixData.copypaste,
-    pixData.payload,
-    transaction && transaction.qrCodeText,
-    transaction && transaction.copyPaste,
-    gatewayBody && gatewayBody.qrCodeText,
-    gatewayBody && gatewayBody.copyPaste,
-    pixData.qrcode,
-    pixData.qrCode,
-    transaction && transaction.qrCode,
-    gatewayBody && gatewayBody.qrCode
-  ];
-
-  const pixCode = candidates.find(value => {
-    if (typeof value !== 'string') return false;
-    const normalized = value.trim();
-    return normalized.length > 0 && !/^data:image\//i.test(normalized);
-  });
-
-  return {
-    pixData,
-    pixCode: typeof pixCode === 'string' ? pixCode.trim() : null
-  };
-}
-
-function extractGatewayError(error) {
-  const responseData = error && error.response ? error.response.data : null;
-  let message = '';
-
-  if (typeof responseData === 'string') {
-    message = responseData;
-  } else if (responseData && typeof responseData === 'object') {
-    message = responseData.message ||
-      (responseData.error && responseData.error.message) ||
-      responseData.error ||
-      responseData.detail ||
-      '';
-  }
-
-  return {
-    status: error && error.response ? error.response.status : null,
-    code: error && error.code ? error.code : null,
-    message: String(message || (error && error.message) || 'Erro desconhecido')
-      .slice(0, 500),
-    data: responseData
+    ...(complement ? { complement: complement.slice(0, 120) } : {}),
   };
 }
 
 const pixAttempts = new Map();
-
 function limitPixRequests(req, res, next) {
   const now = Date.now();
   const windowMs = 10 * 60 * 1000;
   const key = req.ip || req.socket.remoteAddress || 'unknown';
-  const recent = (pixAttempts.get(key) || [])
-    .filter(timestamp => now - timestamp < windowMs);
+  const recent = (pixAttempts.get(key) || []).filter(timestamp => now - timestamp < windowMs);
 
   if (recent.length >= 5) {
     return res.status(429).json({
       success: false,
       code: 'RATE_LIMITED',
-      message: 'Muitas tentativas de geração de PIX. Aguarde alguns minutos e tente novamente.'
+      message: 'Muitas tentativas de geração de PIX. Aguarde alguns minutos e tente novamente.',
     });
   }
 
@@ -395,54 +224,20 @@ const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
 
-const users = {};
-const chatHistory = {};
-
 app.get('/api/health', (req, res) => {
-  res.json({
-    ok: true,
-    service: 'compra-checkout',
-    blackpaymentsConfigured: Boolean(
-      BLACKPAYMENTS_PUBLIC_KEY && BLACKPAYMENTS_SECRET_KEY
-    ),
-    blackpaymentsUrl: BLACKPAYMENTS_TRANSACTIONS_URL
-  });
-});
-
-// ── ENDPOINT DE POSTBACK DO BLACKPAYMENTS ──
-// Configure BLACKPAYMENTS_POSTBACK_URL com a URL pública deste endpoint.
-app.post('/api/blackpayments/postback', (req, res) => {
-  const body = req.body || {};
-  const transaction = body.data || body;
-  const transactionId = transaction && (transaction.id || transaction.transactionId);
-  const status = transaction && transaction.status;
-
-  console.log('[BlackPayments postback]', {
-    transactionId: transactionId || null,
-    status: status || null
-  });
-
-  io.to('admins').emit('blackpayments_status', {
-    transactionId: transactionId ? String(transactionId) : null,
-    status: status ? String(status) : null,
-    payload: body
-  });
-
-  return res.sendStatus(200);
+  res.json({ ok: true, service: 'compra-checkout' });
 });
 
 // ── ENDPOINT DE UPLOAD DE COMPROVANTES ──
 app.post('/api/upload-receipt', upload.single('file'), (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        error: 'Nenhum arquivo recebido.'
-      });
+      return res.status(400).json({ success: false, error: 'Nenhum arquivo recebido.' });
     }
 
+    // Normalize userId to prevent duplicates
     const rawUserId = req.body.userId || 'anon';
-    const userId = normalizeUserId(rawUserId);
+    const userId = rawUserId.startsWith('user-') ? rawUserId.replace(/^user-/, '') : rawUserId;
     const sender = req.body.sender || 'Cliente';
     const filename = req.file.filename;
     const mimetype = req.file.mimetype;
@@ -455,7 +250,7 @@ app.post('/api/upload-receipt', upload.single('file'), (req, res) => {
       filename: originalName,
       mimetype,
       size,
-      serverFilename: filename
+      serverFilename: filename,
     };
 
     console.log(`Comprovante recebido de ${userId}: ${originalName} (${size} bytes)`);
@@ -466,30 +261,17 @@ app.post('/api/upload-receipt', upload.single('file'), (req, res) => {
     });
   } catch (err) {
     console.error('Erro no upload:', err.message);
-    return res.status(500).json({
-      success: false,
-      error: 'Erro ao processar o arquivo.'
-    });
+    return res.status(500).json({ success: false, error: 'Erro ao processar o arquivo.' });
   }
 });
 
 app.post('/api/chat', async (req, res) => {
-  const body = req.body || {};
-  const message = String(body.message || '');
-  const context = body.context;
-  const normalizedId = normalizeUserId(body.userId);
-  const url = body.url;
+  const { message, context, userId, url } = req.body;
+  // Normalize userId to prevent duplicates
+  const normalizedId = userId.startsWith('user-') ? userId.replace(/^user-/, '') : userId;
+  console.log(`Mensagem recebida de ${normalizedId}: ${message} (URL: ${url})`);
 
-  console.log(`Mensagem recebida de ${normalizedId}: ${message} (URL: ${url || ''})`);
-
-  const userMessage = {
-    userId: normalizedId,
-    sender: 'Usuário',
-    text: message,
-    timestamp: new Date().toISOString(),
-    url
-  };
-
+  const userMessage = { userId: normalizedId, sender: 'Usuário', text: message, timestamp: new Date().toISOString(), url };
   if (!chatHistory[normalizedId]) chatHistory[normalizedId] = [];
   chatHistory[normalizedId].push(userMessage);
   io.to('admins').emit('new_message_for_admin', userMessage);
@@ -497,130 +279,103 @@ app.post('/api/chat', async (req, res) => {
   if (!openai) {
     return res.status(503).json({
       reply: 'O atendimento por IA está temporariamente indisponível.',
-      code: 'OPENAI_NOT_CONFIGURED'
+      code: 'OPENAI_NOT_CONFIGURED',
     });
   }
 
   try {
     const messagesForOpenAI = [];
-    if (context) messagesForOpenAI.push({ role: 'system', content: String(context) });
+    if (context) messagesForOpenAI.push({ role: 'system', content: context });
     messagesForOpenAI.push({ role: 'user', content: message });
 
     const completion = await openai.chat.completions.create({
       model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
       messages: messagesForOpenAI,
       max_tokens: 150,
-      temperature: 0.7
+      temperature: 0.7,
     });
 
     const agentReply = completion.choices[0].message.content;
-    const agentMessage = {
-      userId: normalizedId,
-      sender: 'Mateus',
-      text: agentReply,
-      timestamp: new Date().toISOString()
-    };
-
+    const agentMessage = { userId: normalizedId, sender: 'Mateus', text: agentReply, timestamp: new Date().toISOString() };
     if (!chatHistory[normalizedId]) chatHistory[normalizedId] = [];
     chatHistory[normalizedId].push(agentMessage);
     io.to('admins').emit('new_message_for_admin', agentMessage);
     return res.json({ reply: agentReply });
   } catch (error) {
-    console.error(
-      'Erro ao chamar a API do OpenAI:',
-      error.response ? error.response.data : error.message
-    );
-    return res.status(500).json({
-      error: 'Erro ao processar sua solicitação com a IA.'
-    });
+    console.error('Erro ao chamar a API do OpenAI:', error.response ? error.response.data : error.message);
+    return res.status(500).json({ error: 'Erro ao processar sua solicitação com a IA.' });
   }
 });
 
 app.post('/api/pix', limitPixRequests, async (req, res) => {
   const requestId = crypto.randomUUID();
-  res.setHeader('X-Request-Id', requestId);
 
   try {
-    const body = req.body || {};
-    let payerName = String(body.payer_name || '')
-      .trim()
-      .replace(/\s+/g, ' ');
-    let payerCpf = onlyDigits(body.payer_cpf);
-    const amount = normalizeAmount(body.amount);
+    let payerName = String(req.body.payer_name || '').trim().replace(/\s+/g, ' ');
+    let payerCpf = onlyDigits(req.body.payer_cpf);
+    const amount = normalizeAmount(req.body.amount);
+    const payerEmail = req.body.payer_email;
 
+    // Fallback para Nome e CPF se forem inválidos
     if (payerName.length < 3 || payerName.length > 120) {
       payerName = 'Cliente Online';
     }
-
+    
     if (!isValidCpf(payerCpf)) {
-      console.warn(`[${requestId}] CPF inválido. Usando CPF fallback.`);
+      console.warn(`[${requestId}] CPF inválido (${payerCpf}). Usando CPF padrão.`);
       payerCpf = FALLBACK_CPF;
     }
 
     if (!amount) {
-      return res.status(400).json({
-        success: false,
-        code: 'INVALID_AMOUNT',
-        message: 'Valor do pagamento inválido. Envie o valor em centavos.'
-      });
+      return res.status(400).json({ success: false, code: 'INVALID_AMOUNT', message: 'Valor do pagamento inválido.' });
     }
 
     const authorization = getBlackPaymentsAuthorization();
     if (!authorization) {
-      console.error(`[${requestId}] Chaves do BlackPayments ausentes.`);
-      return res.status(503).json({
-        success: false,
-        code: 'PAYMENT_NOT_CONFIGURED',
-        message: 'Pagamento temporariamente indisponível.'
-      });
-    }
-
-    if (REQUIRE_POSTBACK && !BLACKPAYMENTS_POSTBACK_URL) {
-      console.error(`[${requestId}] BLACKPAYMENTS_POSTBACK_URL ausente.`);
-      return res.status(503).json({
-        success: false,
-        code: 'POSTBACK_NOT_CONFIGURED',
-        message: 'O pagamento está temporariamente indisponível.'
-      });
+      console.error(`[${requestId}] Chaves pública/secreta do BlackPayments ausentes.`);
+      return res.status(503).json({ success: false, code: 'PAYMENT_NOT_CONFIGURED', message: 'Pagamento temporariamente indisponível.' });
     }
 
     let items;
     let shippingAddress;
-
     try {
-      items = normalizeItems(body.items, amount);
-      shippingAddress = parseShippingAddress(
-        body.shipping && body.shipping.address,
-        body.shipping && body.shipping.zipCode
-      );
+      items = normalizeItems(req.body.items, amount);
+      shippingAddress = parseShippingAddress(req.body.shipping && req.body.shipping.address, req.body.shipping && req.body.shipping.zipCode);
     } catch (validationError) {
-      if (validationError.message === 'ITEM_INVALID') {
-        return res.status(400).json({
-          success: false,
-          code: 'INVALID_ITEMS',
-          message: 'Dados dos produtos inválidos.'
-        });
+      const isItemError = validationError.message === 'ITEM_INVALID';
+      
+      if (isItemError) {
+        return res.status(400).json({ success: false, code: 'INVALID_ITEMS', message: 'Dados dos produtos inválidos.' });
       }
 
+      // Fallback para Endereço se for inválido
       console.warn(`[${requestId}] Endereço inválido. Usando endereço padrão.`);
       shippingAddress = FALLBACK_SHIPPING;
     }
 
-    const customerEmail = normalizeEmail(body.payer_email, payerCpf);
-    const externalRef = `compra-${requestId}`;
+    // Lógica para gerar e-mail dinâmico e único por cliente (CPF)
+    let customerEmail = payerEmail;
+    if (!customerEmail) {
+      const [user, domain] = DEFAULT_CUSTOMER_EMAIL.split('@');
+      if (user && domain) {
+        customerEmail = `${user}+${payerCpf}@${domain}`;
+      } else {
+        customerEmail = `c${payerCpf}@cliente-pix.com.br`;
+      }
+    }
 
+    const externalRef = `compra-${requestId}`;
     const payload = {
       amount,
       paymentMethod: 'pix',
       pix: {
-        expiresInDays: PIX_EXPIRES_IN_DAYS
+        expiresInDays: PIX_EXPIRES_IN_DAYS,
       },
       items: items.map(item => ({
         title: item.title,
         unitPrice: item.unitPrice,
         quantity: item.quantity,
         tangible: item.tangible,
-        ...(item.externalRef ? { externalRef: item.externalRef } : {})
       })),
       customer: {
         name: payerName,
@@ -628,170 +383,114 @@ app.post('/api/pix', limitPixRequests, async (req, res) => {
         phone: DEFAULT_CUSTOMER_PHONE,
         document: {
           type: 'cpf',
-          number: payerCpf
-        }
+          number: payerCpf,
+        },
       },
       shipping: {
         fee: 0,
         address: {
           street: shippingAddress.street,
           streetNumber: shippingAddress.number,
-          ...(shippingAddress.complement
-            ? { complement: shippingAddress.complement }
-            : {}),
+          ...(shippingAddress.complement ? { complement: shippingAddress.complement } : {}),
           zipCode: shippingAddress.zipCode,
           neighborhood: shippingAddress.neighborhood,
           city: shippingAddress.city,
           state: shippingAddress.state,
-          country: 'BR'
-        }
+          country: 'BR',
+        },
       },
-      ...(BLACKPAYMENTS_POSTBACK_URL
-        ? { postbackUrl: BLACKPAYMENTS_POSTBACK_URL }
-        : {}),
-      traceable: false,
-      metadata: JSON.stringify({
-        source: 'compra-checkout',
-        requestId
-      }),
+      ...(BLACKPAYMENTS_POSTBACK_URL ? { postbackUrl: BLACKPAYMENTS_POSTBACK_URL } : {}),
+      metadata: JSON.stringify({ source: 'compra-checkout', requestId }),
       externalRef,
-      ...(req.ip ? { ip: req.ip } : {})
+      ...(req.ip ? { ip: req.ip } : {}),
     };
 
-    console.log(`[${requestId}] Enviando PIX ao BlackPayments`, {
-      url: BLACKPAYMENTS_TRANSACTIONS_URL,
-      amount,
-      externalRef,
-      itemCount: payload.items.length,
-      hasPostbackUrl: Boolean(BLACKPAYMENTS_POSTBACK_URL)
+    const gatewayResponse = await axios.post(`${BLACKPAYMENTS_API_URL}/v1/transactions`, payload, {
+      headers: {
+        Authorization: authorization,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      timeout: 20000,
     });
 
-    const gatewayResponse = await axios.post(
-      BLACKPAYMENTS_TRANSACTIONS_URL,
-      payload,
-      {
-        headers: {
-          Authorization: authorization,
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        },
-        timeout: 20000,
-        validateStatus: status => status >= 200 && status < 300
-      }
-    );
-
     const gatewayBody = gatewayResponse.data || {};
-    const transaction = gatewayBody && gatewayBody.data &&
-      typeof gatewayBody.data === 'object'
-      ? gatewayBody.data
-      : gatewayBody;
-    const { pixData, pixCode } = extractPixCode(gatewayBody, transaction);
+    const transaction = gatewayBody && gatewayBody.data ? gatewayBody.data : gatewayBody;
+    const pixData = transaction && transaction.pix ? transaction.pix : {};
+    const pixCode = pixData.qrcode || pixData.qrCode || pixData.copyPaste || pixData.copypaste;
 
-    if (!pixCode) {
-      console.error(`[${requestId}] Gateway sem código PIX copia-e-cola.`, {
+    if (!pixCode || typeof pixCode !== 'string') {
+      console.error(`[${requestId}] Resposta do BlackPayments sem data.pix.qrcode.`, {
         status: gatewayResponse.status,
-        transactionId: transaction && (
-          transaction.id ||
-          transaction.objectId ||
-          gatewayBody.objectId
-        ),
-        pixFields: Object.keys(pixData || {}),
-        responseFields: Object.keys(gatewayBody || {})
+        transactionId: transaction && (transaction.id || gatewayBody.objectId),
       });
-
       return res.status(502).json({
         success: false,
         code: 'INVALID_GATEWAY_RESPONSE',
-        message: 'O provedor não retornou um código PIX válido.'
+        message: 'O provedor não retornou um código PIX válido.',
       });
     }
 
-    const transactionId = transaction && (
-      transaction.id ||
-      transaction.objectId ||
-      gatewayBody.objectId ||
-      externalRef
-    );
-
     return res.json({
       success: true,
-      transactionId: String(transactionId),
+      transactionId: String(transaction.id || gatewayBody.objectId || externalRef),
       pixCode,
-      expiresAt: pixData.expirationDate || null
+      expiresAt: pixData.expirationDate || null,
     });
   } catch (error) {
-    const gatewayError = extractGatewayError(error);
+    const gatewayStatus = error.response && error.response.status;
+    const gatewayMessage = error.response && error.response.data && error.response.data.message
+      ? String(error.response.data.message).slice(0, 300)
+      : error.message;
 
-    console.error(`[${requestId}] Erro ao gerar PIX no BlackPayments`, {
-      url: BLACKPAYMENTS_TRANSACTIONS_URL,
-      status: gatewayError.status,
-      code: gatewayError.code,
-      message: gatewayError.message,
-      response: gatewayError.data
-    });
+    console.error(`[${requestId}] Erro ao gerar PIX no BlackPayments (${gatewayStatus || 'sem status'}): ${gatewayMessage}`);
 
     return res.status(502).json({
       success: false,
       code: 'PIX_GATEWAY_ERROR',
-      message: 'Não foi possível gerar o PIX agora. Tente novamente em instantes.'
+      message: 'Não foi possível gerar o PIX agora. Tente novamente em instantes.',
     });
   }
 });
 
+const users = {};
+const chatHistory = {}; // Armazenamento em memória para o histórico de chat
+
 io.on('connection', socket => {
   console.log(`Usuário conectado: ${socket.id}`);
 
-  socket.on('join', data => {
-    const joinData = data || {};
-    const normalizedId = normalizeUserId(joinData.userId);
-    const isAdmin = Boolean(joinData.isAdmin);
-
+  socket.on('join', ({ userId, isAdmin }) => {
+    // Normalize userId: remove "user-" prefix if present to avoid duplicates
+    const normalizedId = userId.startsWith('user-') ? userId.replace(/^user-/, '') : userId;
     socket.userId = normalizedId;
-
     if (isAdmin) {
       socket.join('admins');
-      const normalizedHistory = Object.entries(chatHistory).flatMap(
-        ([uid, messages]) => {
-          const normalizedHistoryId = normalizeUserId(uid);
-          return messages.map(message => ({
-            ...message,
-            userId: normalizedHistoryId
-          }));
-        }
-      );
+      // Normalize all userIds in chatHistory to prevent duplicates in admin
+      const normalizedHistory = Object.entries(chatHistory).flatMap(([uid, msgs]) => {
+        const normalizedId = uid.startsWith('user-') ? uid.replace(/^user-/, '') : uid;
+        return msgs.map(m => ({ ...m, userId: normalizedId }));
+      });
       socket.emit('chat_history', normalizedHistory);
     } else {
       socket.join(normalizedId);
     }
-
     users[normalizedId] = socket.id;
     console.log(`${isAdmin ? 'Admin' : 'Usuário'} ${normalizedId} entrou.`);
   });
 
   socket.on('send_message', data => {
-    const messageData = data || {};
-    const normalizedId = normalizeUserId(messageData.userId);
-    const text = String(messageData.text || '');
-    const sender = String(messageData.sender || 'Usuário');
-    const message = {
-      userId: normalizedId,
-      text,
-      sender,
-      timestamp: new Date().toISOString()
-    };
-
-    if (messageData.attachment) {
-      message.attachment = messageData.attachment;
-    }
-
+    const { userId, text, sender, isAuto, attachment } = data;
+    // Normalize userId to prevent duplicates
+    const normalizedId = userId.startsWith('user-') ? userId.replace(/^user-/, '') : userId;
+    const message = { userId: normalizedId, text, sender, timestamp: new Date().toISOString() };
+    // Passa attachment se existir
+    if (attachment) message.attachment = attachment;
     if (!chatHistory[normalizedId]) chatHistory[normalizedId] = [];
     chatHistory[normalizedId].push(message);
 
-    console.log(
-      `Mensagem de ${sender} (${normalizedId}): ${text}` +
-      `${messageData.attachment ? ' (com anexo)' : ''}`
-    );
-
+    console.log(`Mensagem de ${sender} (${normalizedId}): ${text}${attachment ? ' (com anexo)' : ''}`);
+    
+    // Envia para todos os admins conectados
     io.to('admins').emit('new_message_for_admin', message);
   });
 
@@ -806,40 +505,13 @@ io.on('connection', socket => {
   });
 });
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+app.get("/",(req,res)=>{res.sendFile(path.join(__dirname,"index.html"));});
 
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'admin.html'));
-});
+app.get("/admin",(req,res)=>{res.sendFile(path.join(__dirname,"admin.html"));});
 
-// Erros de API desconhecida devem continuar sendo JSON, e não index.html.
-app.use('/api', (req, res) => {
-  res.status(404).json({
-    success: false,
-    code: 'API_ROUTE_NOT_FOUND',
-    message: 'Rota de API não encontrada.'
-  });
-});
-
-// Catch-all para servir index.html para qualquer outra rota não definida.
-app.get('/*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+// Catch-all para servir index.html para qualquer outra rota não definida
+app.get("/*",(req,res)=>{res.sendFile(path.join(__dirname,"index.html"));});
 
 server.listen(PORT, () => {
   console.log(`Servidor unificado rodando na porta ${PORT}`);
-  console.log(`Endpoint PIX: ${BLACKPAYMENTS_TRANSACTIONS_URL}`);
-
-  if (!BLACKPAYMENTS_PUBLIC_KEY || !BLACKPAYMENTS_SECRET_KEY) {
-    console.warn('BLACKPAYMENTS_PUBLIC_KEY/BLACKPAYMENTS_SECRET_KEY não configuradas.');
-  }
-
-  if (!BLACKPAYMENTS_POSTBACK_URL) {
-    console.warn(
-      'BLACKPAYMENTS_POSTBACK_URL não configurada. ' +
-      'Defina PUBLIC_BASE_URL ou BLACKPAYMENTS_REQUIRE_POSTBACK=false.'
-    );
-  }
 });
